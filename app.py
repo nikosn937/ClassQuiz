@@ -111,32 +111,8 @@ QUIZZES = {
             ],
             "answer": "Η εντολή 6 είναι λανθασμένη (πρέπει να στρίψει δεξιά 90°)"
         }
-    ],
-    "Μάθημα 1: Εισαγωγή στην Πληροφορική": [
-        {
-            "question": "1. Ποια από τις παρακάτω είναι γλώσσα προγραμματισμού υψηλού επιπέδου;",
-            "options": ["Assembly", "Python", "Machine Code", "HTML"],
-            "answer": "Python"
-        },
-        {
-            "question": "2. Τι σημαίνει ο όρος CPU;",
-            "options": ["Central Processing Unit", "Central Power Unit", "Computer Personal Unit", "Control Processing Unit"],
-            "answer": "Central Processing Unit"
-        }
-    ],
-    "Μάθημα 2: Δομές Δεδομένων": [
-        {
-            "question": "1. Ποια δομή δεδομένων ακολουθεί την αρχή LIFO (Last In, First Out);",
-            "options": ["Ουρά (Queue)", "Στοίβα (Stack)", "Δέντρο (Tree)", "Γράφος (Graph)"],
-            "answer": "Στοίβα (Stack)"
-        },
-        {
-            "question": "2. Στον πίνακα `a = [10, 20, 30]`, ποιο είναι το στοιχείο `a[0]`;",
-            "options": ["10", "20", "30", "0"],
-            "answer": "10"
-        }
     ]
-}
+    }
 
 # ==========================================
 # 3. HELPER: SEED QUIZZES TO DB
