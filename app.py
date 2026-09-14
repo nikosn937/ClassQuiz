@@ -226,46 +226,70 @@ def student_dashboard():
         col3.metric("Θέση στη Σειρά", f"{overall_rank}ος", f"σε {total_overall} μαθητές")
 
     tab1, tab2 = st.tabs(["📝 Επίλυση Quiz", "📜 Ιστορικό Βαθμολογιών"])
-
-    with tab1:
+with tab1:
         st.subheader("Επίλεξε Διαγώνισμα για Επίλυση")
         selected_quiz_title = st.selectbox("Διαθέσιμα Quizzes:", list(QUIZZES.keys()))
         questions = QUIZZES[selected_quiz_title]
         
-        with st.form("quiz_form"):
-            user_answers = {}
-            for i, q in enumerate(questions):
-                st.markdown(f"**{q['question']}**")
-                user_answers[i] = st.radio(f"Επιλογή για την ερώτηση {i+1}:", q['options'], key=f"q_{i}")
-                st.write("---")
-            
-            submit_quiz = st.form_submit_button("🚀 Υποβολή Απαντήσεων", type="primary")
-            
-            if submit_quiz:
-                correct_count = 0
-                for i, q in enumerate(questions):
-                    if user_answers[i] == q['answer']:
-                        correct_count += 1
-                
-                final_score = (correct_count / len(questions)) * 100
-                st.success(f"Το Quiz ολοκληρώθηκε! Η βαθμολογία σου: **{final_score:.1f} / 100** ({correct_count}/{len(questions)} σωστά)")
-                
-                # Αποθήκευση αποτελέσματος στη βάση SQL
-                conn = get_db_connection()
-                cursor = conn.cursor()
-                cursor.execute("SELECT QuizID FROM Quizzes WHERE Title = ?", (selected_quiz_title,))
-                quiz_row = cursor.fetchone()
-                
-                if quiz_row:
-                    quiz_id = quiz_row[0]
-                    cursor.execute(
-                        "INSERT INTO QuizResults (Username, QuizID, Score) VALUES (?, ?, ?)",
-                        (username, quiz_id, final_score)
-                    )
-                    conn.commit()
-                conn.close()
-                st.info("Το αποτέλεσμα αποθηκεύτηκε επιτυχώς!")
+        # 🔍 Έλεγχος πόσες προσπάθειες έχει κάνει ο μαθητής για το συγκεκριμένο Quiz
+        conn = get_db_connection()
+        attempts_query = """
+            SELECT COUNT(*) AS AttemptCount, ISNULL(MAX(Score), 0) AS BestScore
+            FROM QuizResults qr
+            JOIN Quizzes q ON qr.QuizID = q.QuizID
+            WHERE qr.Username = ? AND q.Title = ?
+        """
+        df_attempts = pd.read_sql(attempts_query, conn, params=[username, selected_quiz_title])
+        conn.close()
+        
+        attempts_count = df_attempts.iloc[0]['AttemptCount'] if not df_attempts.empty else 0
+        best_score = df_attempts.iloc[0]['BestScore'] if not df_attempts.empty else 0
 
+        # Ενημερωτικό μήνυμα για τις προσπάθειες
+        if attempts_count == 0:
+            st.info("ℹ️ Έχεις **2 διαθέσιμες προσπάθειες** για αυτό το διαγώνισμα. Στον Μέσο Όρο σου θα προσμετρηθεί ο καλύτερος βαθμός.")
+        elif attempts_count == 1:
+            st.warning(f"⚠️ Έχεις κάνει **1 προσπάθεια** (Βαθμός: **{best_score:.1f}/100**). Έχεις ακόμα **1 τελευταία προσπάθεια**!")
+        else:
+            st.error(f"🚫 Έχεις συμπληρώσει το όριο των **2 προσπαθειών** για αυτό το Quiz! Ο καλύτερος βαθμός σου είναι **{best_score:.1f}/100**.")
+
+        # 🔒 Εμφάνιση φόρμας ΜΟΝΟ αν οι προσπάθειες είναι λιγότερες από 2
+        if attempts_count < 2:
+            with st.form("quiz_form"):
+                user_answers = {}
+                for i, q in enumerate(questions):
+                    st.markdown(f"**{q['question']}**")
+                    user_answers[i] = st.radio(f"Επιλογή για την ερώτηση {i+1}:", q['options'], key=f"q_{selected_quiz_title}_{i}")
+                    st.write("---")
+                
+                submit_quiz = st.form_submit_button("🚀 Υποβολή Απαντήσεων", type="primary")
+                
+                if submit_quiz:
+                    correct_count = 0
+                    for i, q in enumerate(questions):
+                        if user_answers[i] == q['answer']:
+                            correct_count += 1
+                    
+                    final_score = (correct_count / len(questions)) * 100
+                    st.success(f"Το Quiz ολοκληρώθηκε! Η βαθμολογία σου σε αυτή την προσπάθεια: **{final_score:.1f} / 100** ({correct_count}/{len(questions)} σωστά)")
+                    
+                    # Αποθήκευση της προσπάθειας στη βάση
+                    conn = get_db_connection()
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT QuizID FROM Quizzes WHERE Title = ?", (selected_quiz_title,))
+                    quiz_row = cursor.fetchone()
+                    
+                    if quiz_row:
+                        quiz_id = quiz_row[0]
+                        cursor.execute(
+                            "INSERT INTO QuizResults (Username, QuizID, Score) VALUES (?, ?, ?)",
+                            (username, quiz_id, final_score)
+                        )
+                        conn.commit()
+                    conn.close()
+                    st.info("Η προσπάθεια αποθηκεύτηκε επιτυχώς!")
+                    st.rerun()
+    
     with tab2:
         st.subheader("Ιστορικό Διαγωνισμάτων")
         if not df_results.empty:
