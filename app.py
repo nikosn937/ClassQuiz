@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import pyodbc
+import platform
 
 # ==========================================
 # 1. DATABASE CONNECTION
@@ -21,7 +22,7 @@ def get_db_connection():
     else:
         # Driver για Streamlit Cloud (Linux / FreeTDS)
         driver = "{FreeTDS}"
-        conn_str = f"DRIVER={driver};SERVER={server};PORT={port};DATABASE={database};UID={username};PWD={password};TDS_Version=8.0;"
+        conn_str = f"DRIVER={driver};SERVER={server};PORT={port};DATABASE={database};UID={username};PWD={password};TDS_Version=7.4;ClientCharset=UTF-8;"
 
     return pyodbc.connect(conn_str)
 
