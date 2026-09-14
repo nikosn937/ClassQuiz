@@ -226,12 +226,13 @@ def student_dashboard():
         col3.metric("Θέση στη Σειρά", f"{overall_rank}ος", f"σε {total_overall} μαθητές")
 
     tab1, tab2 = st.tabs(["📝 Επίλυση Quiz", "📜 Ιστορικό Βαθμολογιών"])
-with tab1:
+
+    with tab1:
         st.subheader("Επίλεξε Διαγώνισμα για Επίλυση")
         selected_quiz_title = st.selectbox("Διαθέσιμα Quizzes:", list(QUIZZES.keys()))
         questions = QUIZZES[selected_quiz_title]
         
-        # 🔍 Έλεγχος πόσες προσπάθειες έχει κάνει ο μαθητής για το συγκεκριμένο Quiz
+        # 🔍 Έλεγχος προσπαθειών
         conn = get_db_connection()
         attempts_query = """
             SELECT COUNT(*) AS AttemptCount, ISNULL(MAX(Score), 0) AS BestScore
@@ -245,7 +246,6 @@ with tab1:
         attempts_count = df_attempts.iloc[0]['AttemptCount'] if not df_attempts.empty else 0
         best_score = df_attempts.iloc[0]['BestScore'] if not df_attempts.empty else 0
 
-        # Ενημερωτικό μήνυμα για τις προσπάθειες
         if attempts_count == 0:
             st.info("ℹ️ Έχεις **2 διαθέσιμες προσπάθειες** για αυτό το διαγώνισμα. Στον Μέσο Όρο σου θα προσμετρηθεί ο καλύτερος βαθμός.")
         elif attempts_count == 1:
@@ -253,7 +253,6 @@ with tab1:
         else:
             st.error(f"🚫 Έχεις συμπληρώσει το όριο των **2 προσπαθειών** για αυτό το Quiz! Ο καλύτερος βαθμός σου είναι **{best_score:.1f}/100**.")
 
-        # 🔒 Εμφάνιση φόρμας ΜΟΝΟ αν οι προσπάθειες είναι λιγότερες από 2
         if attempts_count < 2:
             with st.form("quiz_form"):
                 user_answers = {}
@@ -273,7 +272,6 @@ with tab1:
                     final_score = (correct_count / len(questions)) * 100
                     st.success(f"Το Quiz ολοκληρώθηκε! Η βαθμολογία σου σε αυτή την προσπάθεια: **{final_score:.1f} / 100** ({correct_count}/{len(questions)} σωστά)")
                     
-                    # Αποθήκευση της προσπάθειας στη βάση
                     conn = get_db_connection()
                     cursor = conn.cursor()
                     cursor.execute("SELECT QuizID FROM Quizzes WHERE Title = ?", (selected_quiz_title,))
@@ -289,14 +287,13 @@ with tab1:
                     conn.close()
                     st.info("Η προσπάθεια αποθηκεύτηκε επιτυχώς!")
                     st.rerun()
-    
+
     with tab2:
         st.subheader("Ιστορικό Διαγωνισμάτων")
         if not df_results.empty:
             st.dataframe(df_results, use_container_width=True)
         else:
             st.info("Δεν έχεις υποβάλει ακόμη κάποιο διαγώνισμα.")
-
 # ==========================================
 # 7. TEACHER DASHBOARD
 # ==========================================
