@@ -211,7 +211,7 @@ def student_dashboard():
     df_results = pd.read_sql(results_query, conn, params=[username])
     conn.close()
 
-    # Εμφάνιση Cards
+   # Εμφάνιση Cards
     if not df_rank.empty:
         avg_score = df_rank.iloc[0]['AvgScore']
         class_rank = df_rank.iloc[0]['ClassRank']
@@ -222,7 +222,7 @@ def student_dashboard():
         col1, col2, col3 = st.columns(3)
         col1.metric("Ο Μέσος Όρος σου", f"{avg_score:.1f} / 100")
         col2.metric("Θέση στο Τμήμα", f"{class_rank}ος", f"σε {total_class} μαθητές")
-        col3.metric("Θέση στη Σειρά", f"{overall_rank}ος", f"σε {total_overall} μαθητές")
+        col3.metric("Θέση στην Τάξη (A/Β/Γ)", f"{overall_rank}ος", f"σε {total_overall} μαθητές")
 
     tab1, tab2 = st.tabs(["📝 Επίλυση Quiz", "📜 Ιστορικό Βαθμολογιών"])
 
