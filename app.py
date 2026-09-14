@@ -1,282 +1,218 @@
 import streamlit as st
 import pandas as pd
-from sqlalchemy import create_engine, text
+import pyodbc
 
-# 1. Ρυθμίσεις Σελίδας
-st.set_page_config(page_title="Πρωτάθλημα Πληροφορικής", page_icon="🏆", layout="wide")
-
-# 2. Σύνδεση με τον SQL Server (nikosn_1QUIZ) μέσω st.secrets
-@st.cache_resource
+# ==========================================
+# 1. DATABASE CONNECTION
+# ==========================================
 def get_db_connection():
-    try:
-        db_user = st.secrets["sql"]["user"]        # TEACHER
-        db_password = st.secrets["sql"]["password"]    # Audirs7!!!
-        db_host = st.secrets["sql"]["host"]        # IP / Domain του Arvixe Server
-        db_port = st.secrets["sql"]["port"]        # 1433
-        db_name = st.secrets["sql"]["database"]    # nikosn_1QUIZ
+    # Προσαρμόστε τα στοιχεία σύνδεσης ανάλογα με το περιβάλλον σας
+    conn_str = (
+        "DRIVER={ODBC Driver 17 for SQL Server};"
+        "SERVER=localhost\\SQLEXPRESS;"  # ή η IP/Server Name του SQL Server
+        "DATABASE=nikosn_1QUIZ;"
+        "Trusted_Connection=yes;"        # ή UID=...;PWD=...;
+    )
+    return pyodbc.connect(conn_str)
 
-        # Σύνδεση μέσω SQLAlchemy με pymssql
-        connection_string = f"mssql+pymssql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
-        return create_engine(connection_string, pool_pre_ping=True)
-    except Exception as e:
-        st.error(f"❌ Σφάλμα σύνδεσης με τη βάση δεδομένων: {e}")
-        st.stop()
+# ==========================================
+# 2. PAGE CONFIG
+# ==========================================
+st.set_page_config(
+    page_title="Εκπαιδευτική Πλατφόρμα Quiz",
+    page_icon="🎓",
+    layout="wide"
+)
 
-engine = get_db_connection()
+# Initialize Session States
+if 'logged_in' not in st.session_state:
+    st.session_state['logged_in'] = False
+if 'username' not in st.session_state:
+    st.session_state['username'] = ''
+if 'role' not in st.session_state:
+    st.session_state['role'] = ''
+if 'firstname' not in st.session_state:
+    st.session_state['firstname'] = ''
 
-# 3. Βάση Δεδομένων Quiz (Νέες Παρόμοιες Ασκήσεις - Χωρίς τα δοκιμαστικά quiz)
-QUIZZES = {
-    "Γ.7.Μ1: Εισαγωγή στους Αλγορίθμους & Χαρακτηριστικά (Νέες Ασκήσεις)": [
-        {
-            "question": "1. Ποια από τις παρακάτω οδηγίες περιέχει ΑΣΑΦΕΙΑ (δεν ικανοποιεί το κριτήριο της Σαφήνειας);",
-            "options": [
-                "Πρόσθεσε 200 γραμμάρια αλεύρι στο μίγμα.",
-                "Ψήσε το γλυκό στο φούρνο για λίγη ώρα.",
-                "Ανακάτεψε το μίγμα για 3 λεπτά.",
-                "Πρόσθεσε 2 αβγά."
-            ],
-            "answer": "Ψήσε το γλυκό στο φούρνο για λίγη ώρα."
-        },
-        {
-            "question": "2. Ένας αλγόριθμος εκτελεί μια διαδικασία που δεν τελειώνει ποτέ (μπαίνει σε ατέρμονα βρόχο). Ποιο χαρακτηριστικό παραβιάζεται;",
-            "options": [
-                "Η Σαφήνεια / Καθοριστικότητα",
-                "Η Είσοδος δεδομένων",
-                "Η Περατότητα",
-                "Η Αποτελεσματικότητα"
-            ],
-            "answer": "Η Περατότητα"
-        },
-        {
-            "question": "3. Ποια είναι η σωστή σειρά εντολών για τον αλγόριθμο «Υπολογισμός Μέσου Όρου 3 Βαθμών»;\n1. Τύπωσε τον Μέσο Όρο\n2. Διάβασε τους βαθμούς Β1, Β2, Β3\n3. Υπολόγισε MO = (Β1 + Β2 + Β3) / 3",
-            "options": [
-                "1, 2, 3",
-                "2, 3, 1",
-                "3, 2, 1",
-                "2, 1, 3"
-            ],
-            "answer": "2, 3, 1"
-        },
-        {
-            "question": "4. Δίνεται ο αλγόριθμος για τη σχεδίαση ισόπλευρου τριγώνου πλευράς 10 cm:\n1. Σχεδίασε ευθύγραμμο τμήμα 10 cm\n2. Στρίψε δεξιά 120°\n3. Σχεδίασε ευθύγραμμο τμήμα 10 cm\n4. Στρίψε αριστερά 90°\n5. Σχεδίασε ευθύγραμμο τμήμα 10 cm\nΠοια εντολή περιέχει λάθος;",
-            "options": [
-                "Η εντολή 2",
-                "Η εντολή 4 (πρέπει να στρίψει δεξιά 120°)",
-                "Η εντολή 5",
-                "Ο αλγόριθμος είναι πλήρως σωστός"
-            ],
-            "answer": "Η εντολή 4 (πρέπει να στρίψει δεξιά 120°)"
-        },
-        {
-            "question": "5. Ποια είναι η σωστή σειρά εντολών για την αποστολή ενός μηνύματος e-mail;\n1. Πληκτρολογούμε το κείμενο του μηνύματος\n2. Πατάμε το κουμπί «Αποστολή»\n3. Ανοίγουμε την εφαρμογή ηλεκτρονικού ταχυδρομείου\n4. Γράφουμε τη διεύθυνση του παραλήπτη\n5. Πατάμε «Νέο Μήνυμα»",
-            "options": [
-                "3, 5, 4, 1, 2",
-                "3, 4, 5, 1, 2",
-                "5, 3, 4, 1, 2",
-                "3, 1, 4, 5, 2"
-            ],
-            "answer": "3, 5, 4, 1, 2"
-        },
-        {
-            "question": "6. Όταν λέμε ότι κάθε εντολή ενός αλγορίθμου πρέπει να είναι απλή και υλοποιήσιμη, αναφερόμαστε στο χαρακτηριστικό της:",
-            "options": [
-                "Σαφήνειας",
-                "Περατότητας",
-                "Αποτελεσματικότητας",
-                "Εισόδου"
-            ],
-            "answer": "Αποτελεσματικότητας"
-        },
-        {
-            "question": "7. Ποιο από τα παρακάτω ΣΤΑΔΙΑ ΔΕΝ ανήκει στον κύκλο ανάπτυξης ενός προγράμματος;",
-            "options": [
-                "Ανάλυση προβλήματος",
-                "Σχεδιασμός αλγορίθμου",
-                "Προγραμματισμός / Κωδικοποίηση",
-                "Αγορά νέου υπολογιστή"
-            ],
-            "answer": "Αγορά νέου υπολογιστή"
-        },
-        {
-            "question": "8. Ποια είναι η σωστή σειρά για τον υπολογισμό του κόστους περιφράξεως ενός οικοπέδου;\n1. Μετράμε το μήκος και το πλάτος του οικοπέδου\n2. Υπολογίζουμε την περίμετρο: 2 * μήκος + 2 * πλάτος\n3. Μαθαίνουμε την τιμή του συρματοπλέγματος ανά μέτρο\n4. Πολλαπλασιάζουμε την περίμετρο με την τιμή ανά μέτρο",
-            "options": [
-                "1, 3, 2, 4",
-                "1, 2, 3, 4",
-                "3, 1, 4, 2",
-                "2, 1, 3, 4"
-            ],
-            "answer": "1, 3, 2, 4"
-        }
-    ]
-}
-
-# 4. Συναρτήσεις Βάσης Δεδομένων
-def verify_student(username, password):
-    query = text("SELECT Username, FirstName, LastName, ClassGroup FROM Students WHERE Username = :u AND Password = :p")
-    with engine.connect() as conn:
-        result = conn.execute(query, {"u": username, "p": password}).fetchone()
-        if result:
-            return {
-                "username": result[0],
-                "full_name": f"{result[1]} {result[2]}",
-                "class": result[3]
-            }
-        return None
-
-def save_or_update_score(username, lesson_name, new_score):
-    with engine.begin() as conn:
-        check_query = text("SELECT Score, Attempts FROM Leaderboard WHERE Username = :u AND LessonName = :l")
-        existing = conn.execute(check_query, {"u": username, "l": lesson_name}).fetchone()
-
-        if existing:
-            current_best = existing[0]
-            attempts = existing[1] + 1
-            best_score = max(current_best, new_score)
-            
-            update_query = text("""
-                UPDATE Leaderboard 
-                SET Score = :score, Attempts = :attempts, LastUpdated = GETDATE()
-                WHERE Username = :u AND LessonName = :l
-            """)
-            conn.execute(update_query, {"score": best_score, "attempts": attempts, "u": username, "l": lesson_name})
-        else:
-            insert_query = text("""
-                INSERT INTO Leaderboard (Username, LessonName, Score, Attempts) 
-                VALUES (:u, :l, :score, 1)
-            """)
-            conn.execute(insert_query, {"u": username, "l": lesson_name, "score": new_score})
-
-def load_leaderboard(selected_lesson=None, selected_class=None):
-    base_query = """
-        SELECT 
-            s.FirstName + ' ' + s.LastName AS [Μαθητής],
-            s.ClassGroup AS [Τμήμα],
-            l.LessonName AS [Μάθημα],
-            l.Score AS [Βαθμολογία (%)],
-            l.Attempts AS [Προσπάθειες]
-        FROM Leaderboard l
-        JOIN Students s ON l.Username = s.Username
-    """
+# ==========================================
+# 3. LOGIN FORM
+# ==========================================
+def login_screen():
+    st.title("🔐 Σύνδεση στην Πλατφόρμα")
     
-    conditions = []
-    params = {}
-
-    if selected_lesson and selected_lesson != "Όλα τα Μαθήματα":
-        conditions.append("l.LessonName = :lesson")
-        params["lesson"] = selected_lesson
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        username_input = st.text_input("Όνομα Χρήστη (Username)")
+        password_input = st.text_input("Κωδικός Πρόσβασης (Password)", type="password")
         
-    if selected_class and selected_class != "Όλα τα Τμήματα":
-        conditions.append("s.ClassGroup = :cls")
-        params["cls"] = selected_class
+        if st.button("Σύνδεση", type="primary", use_container_width=True):
+            conn = get_db_connection()
+            query = """
+                SELECT Username, FirstName, LastName, Role, Password 
+                FROM Students 
+                WHERE Username = ?
+            """
+            df_user = pd.read_sql(query, conn, params=[username_input])
+            conn.close()
 
-    if conditions:
-        base_query += " WHERE " + " AND ".join(conditions)
-
-    base_query += " ORDER BY l.Score DESC, l.Attempts ASC"
-    
-    return pd.read_sql(text(base_query), engine, params=params)
-
-# 5. Session State για διατήρηση σύνδεσης
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-if "student_data" not in st.session_state:
-    st.session_state.student_data = {}
-
-# --- ΟΘΟΝΗ ΣΥΝΔΕΣΗΣ ---
-if not st.session_state.logged_in:
-    st.title("🔐 Είσοδος στο Πρωτάθλημα Πληροφορικής")
-    
-    with st.form("login_form"):
-        username = st.text_input("Username Μαθητή")
-        password = st.text_input("Κωδικός Πρόσβασης", type="password")
-        submit = st.form_submit_button("Σύνδεση")
-        
-        if submit:
-            student_info = verify_student(username, password)
-            if student_info:
-                st.session_state.logged_in = True
-                st.session_state.student_data = student_info
-                st.success(f"Καλώς ήρθες, {student_info['full_name']}!")
-                st.rerun()
+            if not df_user.empty:
+                user_row = df_user.iloc[0]
+                # Έλεγχος κωδικού (μπορεί να γίνει και με hashing αν χρησιμοποιείτε bcrypt)
+                if user_row['Password'] == password_input:
+                    st.session_state['logged_in'] = True
+                    st.session_state['username'] = user_row['Username']
+                    st.session_state['role'] = user_row['Role']
+                    st.session_state['firstname'] = user_row['FirstName']
+                    st.success("Επιτυχής σύνδεση!")
+                    st.rerun()
+                else:
+                    st.error("Λανθασμένος κωδικός πρόσβασης.")
             else:
-                st.error("Λανθασμένο Username ή Κωδικός.")
+                st.error("Το όνομα χρήστη δεν βρέθηκε.")
 
-# --- ΚΥΡΙΩΣ ΕΦΑΡΜΟΓΗ ---
+# ==========================================
+# 4. STUDENT DASHBOARD
+# ==========================================
+def student_dashboard():
+    username = st.session_state['username']
+    st.title(f"🎓 Καλωσόρισες, {st.session_state['firstname']}!")
+    
+    conn = get_db_connection()
+    
+    # 1. Ανάκτηση Θέσης & Μέσου Όρου από τα Views (Μόνο για τον συνδεδεμένο μαθητή)
+    rank_query = """
+        SELECT c.AvgScore, c.ClassRank, c.TotalInClass, o.OverallRank, o.TotalStudents
+        FROM vw_ClassRankings c
+        JOIN vw_OverallRankings o ON c.Username = o.Username
+        WHERE c.Username = ?
+    """
+    df_rank = pd.read_sql(rank_query, conn, params=[username])
+    
+    # 2. Ανάκτηση Ατομικού Ιστορικού Quiz
+    results_query = """
+        SELECT q.Title AS [Διαγώνισμα], q.Subject AS [Μάθημα], qr.Score AS [Βαθμός], qr.CompletedAt AS [Ημερομηνία]
+        FROM QuizResults qr
+        JOIN Quizzes q ON qr.QuizID = q.QuizID
+        WHERE qr.Username = ?
+        ORDER BY qr.CompletedAt DESC
+    """
+    df_results = pd.read_sql(results_query, conn, params=[username])
+    conn.close()
+
+    # Εμφάνιση Μετρικών Cards
+    if not df_rank.empty:
+        avg_score = df_rank.iloc[0]['AvgScore']
+        class_rank = df_rank.iloc[0]['ClassRank']
+        total_class = df_rank.iloc[0]['TotalInClass']
+        overall_rank = df_rank.iloc[0]['OverallRank']
+        total_overall = df_rank.iloc[0]['TotalStudents']
+
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Ο Μέσος Όρος σου", f"{avg_score:.1f} / 100")
+        col2.metric("Θέση στο Τμήμα", f"{class_rank}ος", f"σε {total_class} μαθητές")
+        col3.metric("Θέση στη Σειρά (Όλες οι τάξεις)", f"{overall_rank}ος", f"σε {total_overall} μαθητές")
+
+    st.divider()
+    
+    # Πίνακας με τα προσωπικά αποτελέσματα
+    st.subheader("📜 Το Ιστορικό των Διαγωνισμάτων σου")
+    if not df_results.empty:
+        st.dataframe(df_results, use_container_width=True)
+    else:
+        st.info("Δεν έχεις ολοκληρώσει ακόμη κάποιο διαγώνισμα.")
+
+# ==========================================
+# 5. TEACHER DASHBOARD
+# ==========================================
+def teacher_dashboard():
+    st.title("👨‍🏫 Dashboard Καθηγητή")
+    st.write("Πλήρης εικόνα επιδόσεων και κατατάξεων μαθητών.")
+    
+    conn = get_db_connection()
+    
+    # 1. Ανάκτηση όλων των κατατάξεων
+    all_ranks_query = """
+        SELECT 
+            c.ClassGroup AS [Τμήμα],
+            c.LastName AS [Επώνυμο],
+            c.FirstName AS [Όνομα],
+            c.AvgScore AS [Μέσος Όρος],
+            c.ClassRank AS [Θέση Τμήματος],
+            o.OverallRank AS [Θέση Σειράς]
+        FROM vw_ClassRankings c
+        JOIN vw_OverallRankings o ON c.Username = o.Username
+        ORDER BY c.ClassGroup, c.ClassRank
+    """
+    df_all_ranks = pd.read_sql(all_ranks_query, conn)
+    
+    # 2. Ανάκτηση αναλυτικών αποτελεσμάτων
+    all_results_query = """
+        SELECT 
+            s.ClassGroup AS [Τμήμα],
+            s.LastName + ' ' + s.FirstName AS [Μαθητής],
+            q.Title AS [Διαγώνισμα],
+            qr.Score AS [Βαθμός],
+            qr.CompletedAt AS [Ημερομηνία]
+        FROM QuizResults qr
+        JOIN Students s ON qr.Username = s.Username
+        JOIN Quizzes q ON qr.QuizID = q.QuizID
+        ORDER BY qr.CompletedAt DESC
+    """
+    df_all_results = pd.read_sql(all_results_query, conn)
+    conn.close()
+
+    # Φίλτρα
+    st.sidebar.header("🔍 Φίλτρα Αναζήτησης")
+    class_list = ["Όλα τα Τμήματα"] + sorted(df_all_ranks['Τμήμα'].unique().tolist())
+    selected_class = st.sidebar.selectbox("Επιλογή Τμήματος", class_list)
+
+    if selected_class != "Όλα τα Τμήματα":
+        filtered_ranks = df_all_ranks[df_all_ranks['Τμήμα'] == selected_class]
+        filtered_results = df_all_results[df_all_results['Τμήμα'] == selected_class]
+    else:
+        filtered_ranks = df_all_ranks
+        filtered_results = df_all_results
+
+    # Tabs για οργάνωση των πληροφοριών
+    tab1, tab2 = st.tabs(["🏆 Γενική Κατάταξη & Μ.Ο.", "📝 Αναλυτικά Αποτελέσματα Quiz"])
+
+    with tab1:
+        st.subheader(f"Πίνακας Κατάταξης ({selected_class})")
+        st.dataframe(filtered_ranks, use_container_width=True)
+        
+        # Εξαγωγή σε CSV
+        csv = filtered_ranks.to_csv(index=False).encode('utf-8-sig')
+        st.download_button(
+            label="📥 Εξαγωγή Κατάταξης σε CSV",
+            data=csv,
+            file_name=f'rankings_{selected_class}.csv',
+            mime='text/csv',
+        )
+
+    with tab2:
+        st.subheader(f"Αποτελέσματα Διαγωνισμάτων ({selected_class})")
+        st.dataframe(filtered_results, use_container_width=True)
+
+# ==========================================
+# 6. MAIN ROUTER & SIDEBAR LOGOUT
+# ==========================================
+if not st.session_state['logged_in']:
+    login_screen()
 else:
-    st.sidebar.title(f"👤 {st.session_state.student_data['full_name']}")
-    st.sidebar.caption(f"Τμήμα: {st.session_state.student_data['class']}")
+    # Sidebar
+    st.sidebar.title("👤 Στοιχεία Χρήστη")
+    st.sidebar.write(f"**Χρήστης:** {st.session_state['username']}")
+    st.sidebar.write(f"**Ρόλος:** {st.session_state['role']}")
     
     if st.sidebar.button("Αποσύνδεση"):
-        st.session_state.logged_in = False
-        st.session_state.student_data = {}
+        st.session_state['logged_in'] = False
+        st.session_state['username'] = ''
+        st.session_state['role'] = ''
+        st.session_state['firstname'] = ''
         st.rerun()
 
-    menu = st.sidebar.radio("Πλοήγηση", ["📝 Ασκήσεις / Quiz", "🏆 Πίνακας Κατάταξης (Leaderboard)"])
-
-    # --- ΕΝΟΤΗΤΑ ΑΣΚΗΣΕΩΝ ---
-    if menu == "📝 Ασκήσεις / Quiz":
-        st.title("🎯 Ασκήσεις Πληροφορικής")
-        
-        selected_lesson = st.selectbox("Επίλεξε Μάθημα:", list(QUIZZES.keys()))
-        questions = QUIZZES[selected_lesson]
-
-        st.info(f"Επίλεξες: **{selected_lesson}** ({len(questions)} ερωτήσεις)")
-
-        with st.form("quiz_form"):
-            user_answers = {}
-            for i, q in enumerate(questions):
-                st.subheader(q["question"])
-                user_answers[i] = st.radio(
-                    "Επίλεξε απάντηση:",
-                    q["options"],
-                    key=f"{selected_lesson}_q_{i}",
-                    index=None
-                )
-                st.divider()
-
-            submit_quiz = st.form_submit_button("Υποβολή Απαντήσεων")
-
-        if submit_quiz:
-            score = 0
-            total = len(questions)
-            
-            for i, q in enumerate(questions):
-                if user_answers[i] == q["answer"]:
-                    score += 1
-            
-            final_score = int((score / total) * 100)
-            st.balloons()
-            st.success(f"Ολοκλήρωσες το quiz! Το σκορ σου: **{final_score} / 100** ({score}/{total} σωστές).")
-            
-            # Αποθήκευση στον SQL Server
-            save_or_update_score(st.session_state.student_data["username"], selected_lesson, final_score)
-            st.info("Η βαθμολογία σου ενημερώθηκε στη βάση δεδομένων του Πρωταθλήματος!")
-
-    # --- ΕΝΟΤΗΤΑ LEADERBOARD ---
-    elif menu == "🏆 Πίνακας Κατάταξης (Leaderboard)":
-        st.title("🏆 Πρωτάθλημα Πληροφορικής")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            filter_lesson = st.selectbox("Φιλτράρισμα ανά Μάθημα:", ["Όλα τα Μαθήματα"] + list(QUIZZES.keys()))
-        with col2:
-            filter_class = st.selectbox("Φιλτράρισμα ανά Τμήμα:", ["Όλα τα Τμήματα", "Γ1", "Γ2", "Γ3"])
-        
-        df_scores = load_leaderboard(filter_lesson, filter_class)
-        
-        if not df_scores.empty:
-            df_scores.index += 1
-            st.dataframe(
-                df_scores,
-                use_container_width=True,
-                column_config={
-                    "Βαθμολογία (%)": st.column_config.ProgressColumn(
-                        "Βαθμολογία (%)",
-                        format="%d%%",
-                        min_value=0,
-                        max_value=100,
-                    )
-                }
-            )
-        else:
-            st.info("Δεν υπάρχουν ακόμη καταχωρημένες βαθμολογίες για τα επιλεγμένα φίλτρα.")
+    # Routing βάσει ρόλου
+    if st.session_state['role'] == 'TEACHER':
+        teacher_dashboard()
+    else:
+        student_dashboard()
