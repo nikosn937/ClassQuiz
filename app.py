@@ -9,12 +9,13 @@ st.set_page_config(page_title="Πρωτάθλημα Πληροφορικής", p
 @st.cache_resource
 def get_db_connection():
     try:
-        db_user = st.secrets["sql"]["user"]
-        db_password = st.secrets["sql"]["password"]
-        db_host = st.secrets["sql"]["host"]
-        db_port = st.secrets["sql"]["port"]
-        db_name = st.secrets["sql"]["database"]
+        db_user = st.secrets["sql"]["user"]        # TEACHER
+        db_password = st.secrets["sql"]["password"]    # Audirs7!!!
+        db_host = st.secrets["sql"]["host"]        # IP / Domain του Arvixe Server
+        db_port = st.secrets["sql"]["port"]        # 1433
+        db_name = st.secrets["sql"]["database"]    # nikosn_1QUIZ
 
+        # Σύνδεση μέσω SQLAlchemy με pymssql
         connection_string = f"mssql+pymssql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
         return create_engine(connection_string, pool_pre_ping=True)
     except Exception as e:
@@ -23,8 +24,90 @@ def get_db_connection():
 
 engine = get_db_connection()
 
-# 3. Βάση Δεδομένων Quiz
+# 3. Βάση Δεδομένων Quiz (Ενσωμάτωση Φύλλου Εργασίας Γ.7.Μ1)
 QUIZZES = {
+    "Γ.7.Μ1: Αλγόριθμοι - Χαρακτηριστικά": [
+        {
+            "question": "1. Ποια από τις πιο κάτω εντολές ΔΕΝ είναι σαφής (περιέχει ασάφεια);",
+            "options": [
+                "Πρόσθεσε 0.5 λίτρα νερού.",
+                "Βάλε λίγη ζάχαρη.",
+                "Πρόσθεσε τον χυμό ενός πορτοκαλιού.",
+                "Ανακάτεψε τα πιο πάνω υλικά για 6 λεπτά."
+            ],
+            "answer": "Βάλε λίγη ζάχαρη."
+        },
+        {
+            "question": "2. Ο Αλγόριθμος είναι μια σειρά από βήματα που:",
+            "options": [
+                "Τοποθετούνται σε λογική σειρά και περιγράφουν τον τρόπο επίλυσης ενός προβλήματος",
+                "Μπορούν να εκτελεστούν μόνο από έναν υπολογιστή",
+                "Περιγράφουν μια διαδικασία ετοιμασίας φαγητού",
+                "Περιγράφουν τη λύση μιας μαθηματικής εξίσωσης"
+            ],
+            "answer": "Τοποθετούνται σε λογική σειρά και περιγράφουν τον τρόπο επίλυσης ενός προβλήματος"
+        },
+        {
+            "question": "3. Η Σαφήνεια είναι χαρακτηριστικό του Αλγόριθμου το οποίο καθορίζει ότι:",
+            "options": [
+                "Κάθε εντολή/οδηγία πρέπει να είναι απλή",
+                "Κάθε εντολή/οδηγία πρέπει να καθορίζεται χωρίς καμία αμφιβολία για τον τρόπο εκτέλεσής της",
+                "Οι εντολές / οδηγίες που δίνονται πρέπει να έχουν σχόλια",
+                "Κάθε εντολή/οδηγία πρέπει να μην έχει ορθογραφικά λάθη"
+            ],
+            "answer": "Κάθε εντολή/οδηγία πρέπει να καθορίζεται χωρίς καμία αμφιβολία για τον τρόπο εκτέλεσής της"
+        },
+        {
+            "question": "4. Η Περατότητα είναι χαρακτηριστικό του Αλγόριθμου το οποίο καθορίζει ότι:",
+            "options": [
+                "Ο Αλγόριθμος είναι αποτελεσματικός",
+                "Ο Αλγόριθμος μπορεί να λειτουργήσει",
+                "Κάθε εκτέλεση είναι πεπερασμένη, δηλαδή τελειώνει ύστερα από έναν πεπερασμένο αριθμό διεργασιών ή βημάτων",
+                "Ο Αλγόριθμος είναι ταχύς"
+            ],
+            "answer": "Κάθε εκτέλεση είναι πεπερασμένη, δηλαδή τελειώνει ύστερα από έναν πεπερασμένο αριθμό διεργασιών ή βημάτων"
+        },
+        {
+            "question": "5. Η Αποτελεσματικότητα είναι χαρακτηριστικό του Αλγόριθμου το οποίο καθορίζει ότι:",
+            "options": [
+                "Ο Αλγόριθμος δίνει ένα μόνο αποτέλεσμα",
+                "Ο Αλγόριθμος μπορεί να εκτελεστεί από έναν υπολογιστή",
+                "Ο Αλγόριθμος είναι οικονομικός",
+                "Ένας αλγόριθμος θα πρέπει να δίνει ένα αποτέλεσμα σε πεπερασμένο χρονικό διάστημα"
+            ],
+            "answer": "Ένας αλγόριθμος θα πρέπει να δίνει ένα αποτέλεσμα σε πεπερασμένο χρονικό διάστημα"
+        },
+        {
+            "question": "6. Ποια είναι η σωστή σειρά ώστε οι παρακάτω εντολές να αποτελέσουν αλγόριθμο υπολογισμού εμβαδού τριγώνου;\n1. Δώσε τη βάση τριγώνου\n2. Υπολόγισε το εμβαδόν (Β x Υ/2)\n3. Τύπωσε το εμβαδόν\n4. Δώσε το ύψος",
+            "options": [
+                "1, 2, 3, 4",
+                "1, 3, 4, 2",
+                "1, 4, 2, 3",
+                "4, 1, 2, 3"
+            ],
+            "answer": "1, 4, 2, 3"
+        },
+        {
+            "question": "7. Ποια είναι η σωστή σειρά για την αντιγραφή μέρους κειμένου στο Word;\n1. Μετακίνησε τον δρομέα στο σημείο που θα γίνει η αντιγραφή\n2. Επίλεξε το μέρος του κειμένου που θα αντιγράψεις\n3. Επίλεξε την εντολή Copy\n4. Επίλεξε την εντολή Paste\n5. Τοποθέτησε τον δρομέα στην αρχή του κειμένου που θα αντιγράψεις",
+            "options": [
+                "5, 2, 3, 1, 4",
+                "5, 2, 3, 4, 1",
+                "5, 1, 2, 3, 4",
+                "Κανένα από τα πιο πάνω"
+            ],
+            "answer": "5, 2, 3, 1, 4"
+        },
+        {
+            "question": "8. Ο αλγόριθμος σχεδίασης τετραγώνου πλευράς 20 cm περιλαμβάνει τα βήματα:\n1. Σχεδίασε ευθ. τμήμα 20cm | 2. Στρίψε δεξιά 90° | 3. Σχεδίασε ευθ. τμήμα 20cm | 4. Στρίψε δεξιά 90° | 5. Σχεδίασε ευθ. τμήμα 20cm | 6. Στρίψε αριστερά 90° | 7. Σχεδίασε ευθ. τμήμα 20cm.\nΠοιο είναι το σφάλμα;",
+            "options": [
+                "Η εντολή 4 είναι λανθασμένη",
+                "Υπάρχει πρόβλημα σαφήνειας σε μια από τις εντολές",
+                "Η εντολή 6 είναι λανθασμένη (πρέπει να στρίψει δεξιά 90°)",
+                "Ο αλγόριθμος είναι σωστός"
+            ],
+            "answer": "Η εντολή 6 είναι λανθασμένη (πρέπει να στρίψει δεξιά 90°)"
+        }
+    ],
     "Μάθημα 1: Εισαγωγή στην Πληροφορική": [
         {
             "question": "1. Ποια από τις παρακάτω είναι γλώσσα προγραμματισμού υψηλού επιπέδου;",
@@ -64,17 +147,7 @@ def verify_student(username, password):
             }
         return None
 
-def get_user_attempts(username, lesson_name):
-    """ Επιστρέφει τις προσπάθειες που έχει κάνει ο μαθητής στο συγκεκριμένο μάθημα """
-    query = text("SELECT Attempts, Score FROM Leaderboard WHERE Username = :u AND LessonName = :l")
-    with engine.connect() as conn:
-        res = conn.execute(query, {"u": username, "l": lesson_name}).fetchone()
-        if res:
-            return res[0], res[1]  # (Attempts, Current Best Score)
-        return 0, 0
-
 def save_or_update_score(username, lesson_name, new_score):
-    """ Αποθηκεύει τη βαθμολογία και αυξάνει τις προσπάθειες κατά 1 """
     with engine.begin() as conn:
         check_query = text("SELECT Score, Attempts FROM Leaderboard WHERE Username = :u AND LessonName = :l")
         existing = conn.execute(check_query, {"u": username, "l": lesson_name}).fetchone()
@@ -97,38 +170,18 @@ def save_or_update_score(username, lesson_name, new_score):
             """)
             conn.execute(insert_query, {"u": username, "l": lesson_name, "score": new_score})
 
-def load_overall_leaderboard(selected_class=None):
-    """ Υπολογίζει το Άθροισμα και τον Μέσο Όρο για κάθε μαθητή """
-    base_query = """
-        SELECT 
-            s.FirstName + ' ' + s.LastName AS [Μαθητής],
-            s.ClassGroup AS [Τμήμα],
-            SUM(l.Score) AS [Συνολικοί Πόντοι],
-            ROUND(AVG(CAST(l.Score AS FLOAT)), 1) AS [Μέσος Όρος (%)],
-            COUNT(l.LessonName) AS [Ολοκληρωμένα Quiz]
-        FROM Leaderboard l
-        JOIN Students s ON l.Username = s.Username
-    """
-    params = {}
-    if selected_class and selected_class != "Όλα τα Τμήματα":
-        base_query += " WHERE s.ClassGroup = :cls"
-        params["cls"] = selected_class
-
-    base_query += " GROUP BY s.FirstName, s.LastName, s.ClassGroup ORDER BY [Συνολικοί Πόντοι] DESC, [Μέσος Όρος (%)] DESC"
-    return pd.read_sql(text(base_query), engine, params=params)
-
-def load_lesson_leaderboard(selected_lesson=None, selected_class=None):
-    """ Αναλυτικός πίνακας ανά Μάθημα """
+def load_leaderboard(selected_lesson=None, selected_class=None):
     base_query = """
         SELECT 
             s.FirstName + ' ' + s.LastName AS [Μαθητής],
             s.ClassGroup AS [Τμήμα],
             l.LessonName AS [Μάθημα],
-            l.Score AS [Καλύτερη Βαθμολογία (%)],
+            l.Score AS [Βαθμολογία (%)],
             l.Attempts AS [Προσπάθειες]
         FROM Leaderboard l
         JOIN Students s ON l.Username = s.Username
     """
+    
     conditions = []
     params = {}
 
@@ -144,9 +197,10 @@ def load_lesson_leaderboard(selected_lesson=None, selected_class=None):
         base_query += " WHERE " + " AND ".join(conditions)
 
     base_query += " ORDER BY l.Score DESC, l.Attempts ASC"
+    
     return pd.read_sql(text(base_query), engine, params=params)
 
-# 5. Session State
+# 5. Session State για διατήρηση σύνδεσης
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "student_data" not in st.session_state:
@@ -190,100 +244,63 @@ else:
         selected_lesson = st.selectbox("Επίλεξε Μάθημα:", list(QUIZZES.keys()))
         questions = QUIZZES[selected_lesson]
 
-        # Έλεγχος Προσπαθειών Μαθητή
-        attempts, best_score = get_user_attempts(st.session_state.student_data["username"], selected_lesson)
-        
-        col_info1, col_info2 = st.columns(2)
-        col_info1.info(f"📌 **Προσπάθειες:** {attempts} / 2")
-        if attempts > 0:
-            col_info2.success(f"⭐ **Καλύτερο Σκορ:** {best_score}%")
+        st.info(f"Επίλεξες: **{selected_lesson}** ({len(questions)} ερωτήσεις)")
 
-        # Αν ο μαθητής έχει συμπληρώσει 2 προσπάθειες
-        if attempts >= 2:
-            st.warning("⚠️ Έχεις εξαντλήσει το όριο των 2 προσπαθειών για αυτό το quiz!")
-        else:
-            with st.form("quiz_form"):
-                user_answers = {}
-                for i, q in enumerate(questions):
-                    st.subheader(q["question"])
-                    user_answers[i] = st.radio(
-                        "Επίλεξε απάντηση:",
-                        q["options"],
-                        key=f"{selected_lesson}_q_{i}",
-                        index=None
-                    )
-                    st.divider()
+        with st.form("quiz_form"):
+            user_answers = {}
+            for i, q in enumerate(questions):
+                st.subheader(q["question"])
+                user_answers[i] = st.radio(
+                    "Επίλεξε απάντηση:",
+                    q["options"],
+                    key=f"{selected_lesson}_q_{i}",
+                    index=None
+                )
+                st.divider()
 
-                submit_quiz = st.form_submit_button("Υποβολή Απαντήσεων")
+            submit_quiz = st.form_submit_button("Υποβολή Απαντήσεων")
 
-            if submit_quiz:
-                score = 0
-                total = len(questions)
-                
-                for i, q in enumerate(questions):
-                    if user_answers[i] == q["answer"]:
-                        score += 1
-                
-                final_score = int((score / total) * 100)
-                st.balloons()
-                st.success(f"Ολοκλήρωσες το quiz! Το σκορ σου σε αυτή την προσπάθεια: **{final_score} / 100** ({score}/{total} σωστές).")
-                
-                # Αποθήκευση στον SQL Server
-                save_or_update_score(st.session_state.student_data["username"], selected_lesson, final_score)
-                st.rerun()
+        if submit_quiz:
+            score = 0
+            total = len(questions)
+            
+            for i, q in enumerate(questions):
+                if user_answers[i] == q["answer"]:
+                    score += 1
+            
+            final_score = int((score / total) * 100)
+            st.balloons()
+            st.success(f"Ολοκλήρωσες το quiz! Το σκορ σου: **{final_score} / 100** ({score}/{total} σωστές).")
+            
+            # Αποθήκευση στον SQL Server
+            save_or_update_score(st.session_state.student_data["username"], selected_lesson, final_score)
+            st.info("Η βαθμολογία σου ενημερώθηκε στη βάση δεδομένων του Πρωταθλήματος!")
 
     # --- ΕΝΟΤΗΤΑ LEADERBOARD ---
     elif menu == "🏆 Πίνακας Κατάταξης (Leaderboard)":
         st.title("🏆 Πρωτάθλημα Πληροφορικής")
         
-        tab1, tab2 = st.tabs(["🥇 Γενική Κατάταξη (Άθροισμα & Μ.Ο.)", "📊 Αναλυτικά ανά Μάθημα"])
-
-        # TAB 1: ΓΕΝΙΚΗ ΚΑΤΑΤΑΞΗ
-        with tab1:
-            st.subheader("Συνολική Βαθμολογία Πρωταθλήματος")
-            filter_class = st.selectbox("Φιλτράρισμα ανά Τμήμα:", ["Όλα τα Τμήματα", "Γ1", "Γ2", "Γ3"], key="overall_class")
-            
-            df_overall = load_overall_leaderboard(filter_class)
-            if not df_overall.empty:
-                df_overall.index += 1
-                st.dataframe(
-                    df_overall,
-                    use_container_width=True,
-                    column_config={
-                        "Μέσος Όρος (%)": st.column_config.ProgressColumn(
-                            "Μέσος Όρος (%)",
-                            format="%.1f%%",
-                            min_value=0,
-                            max_value=100,
-                        )
-                    }
-                )
-            else:
-                st.info("Δεν υπάρχουν ακόμη καταχωρημένες βαθμολογίες.")
-
-        # TAB 2: ΑΝΑΛΥΤΙΚΑ ΑΝΑ ΜΑΘΗΜΑ
-        with tab2:
-            st.subheader("Βαθμολογίες ανά Μάθημα")
-            col1, col2 = st.columns(2)
-            with col1:
-                filter_lesson = st.selectbox("Φιλτράρισμα ανά Μάθημα:", ["Όλα τα Μαθήματα"] + list(QUIZZES.keys()), key="lesson_filter")
-            with col2:
-                filter_class_lesson = st.selectbox("Φιλτράρισμα ανά Τμήμα:", ["Όλα τα Τμήματα", "Γ1", "Γ2", "Γ3"], key="lesson_class_filter")
-            
-            df_lesson = load_lesson_leaderboard(filter_lesson, filter_class_lesson)
-            if not df_lesson.empty:
-                df_lesson.index += 1
-                st.dataframe(
-                    df_lesson,
-                    use_container_width=True,
-                    column_config={
-                        "Καλύτερη Βαθμολογία (%)": st.column_config.ProgressColumn(
-                            "Καλύτερη Βαθμολογία (%)",
-                            format="%d%%",
-                            min_value=0,
-                            max_value=100,
-                        )
-                    }
-                )
-            else:
-                st.info("Δεν υπάρχουν ακόμη καταχωρημένες βαθμολογίες για τα επιλεγμένα φίλτρα.")
+        col1, col2 = st.columns(2)
+        with col1:
+            filter_lesson = st.selectbox("Φιλτράρισμα ανά Μάθημα:", ["Όλα τα Μαθήματα"] + list(QUIZZES.keys()))
+        with col2:
+            filter_class = st.selectbox("Φιλτράρισμα ανά Τμήμα:", ["Όλα τα Τμήματα", "Γ1", "Γ2", "Γ3"])
+        
+        df_scores = load_leaderboard(filter_lesson, filter_class)
+        
+        if not df_scores.empty:
+            df_scores.index += 1
+            st.dataframe(
+                df_scores,
+                use_container_width=True,
+                column_config={
+                    "Βαθμολογία (%)": st.column_config.ProgressColumn(
+                        "Βαθμολογία (%)",
+                        format="%d%%",
+                        min_value=0,
+                        max_value=100,
+                    )
+                }
+            )
+        else:
+            st.info("Δεν υπάρχουν ακόμη καταχωρημένες βαθμολογίες για τα επιλεγμένα φίλτρα.")
