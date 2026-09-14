@@ -182,7 +182,6 @@ def login_screen():
                     st.error("Λανθασμένος κωδικός πρόσβασης.")
             else:
                 st.error("Το όνομα χρήστη δεν βρέθηκε.")
-
 # ==========================================
 # 6. STUDENT DASHBOARD
 # ==========================================
@@ -192,7 +191,7 @@ def student_dashboard():
     
     conn = get_db_connection()
     
-    # 1. Θέση & Μέσος Όρος από Views
+    # 1. Θέση & Μέσος Όρος από Views (Διαβάζει πάντα τα πιο πρόσφατα δεδομένα)
     rank_query = """
         SELECT c.AvgScore, c.ClassRank, c.TotalInClass, o.OverallRank, o.TotalStudents
         FROM vw_ClassRankings c
@@ -270,7 +269,6 @@ def student_dashboard():
                             correct_count += 1
                     
                     final_score = (correct_count / len(questions)) * 100
-                    st.success(f"Το Quiz ολοκληρώθηκε! Η βαθμολογία σου σε αυτή την προσπάθεια: **{final_score:.1f} / 100** ({correct_count}/{len(questions)} σωστά)")
                     
                     conn = get_db_connection()
                     cursor = conn.cursor()
@@ -285,7 +283,8 @@ def student_dashboard():
                         )
                         conn.commit()
                     conn.close()
-                    st.info("Η προσπάθεια αποθηκεύτηκε επιτυχώς!")
+                    
+                    # Επαναφορά της σελίδας για να ενημερωθούν αμέσως τα στατιστικά
                     st.rerun()
 
     with tab2:
@@ -294,6 +293,7 @@ def student_dashboard():
             st.dataframe(df_results, use_container_width=True)
         else:
             st.info("Δεν έχεις υποβάλει ακόμη κάποιο διαγώνισμα.")
+
 # ==========================================
 # 7. TEACHER DASHBOARD
 # ==========================================
