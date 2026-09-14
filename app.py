@@ -6,13 +6,23 @@ import pyodbc
 # 1. DATABASE CONNECTION
 # ==========================================
 def get_db_connection():
-    # Προσαρμόστε τα στοιχεία σύνδεσης ανάλογα με το περιβάλλον σας
-    conn_str = (
-        "DRIVER={ODBC Driver 17 for SQL Server};"
-        "SERVER=localhost\\SQLEXPRESS;"  # ή η IP/Server Name του SQL Server
-        "DATABASE=nikosn_1QUIZ;"
-        "Trusted_Connection=yes;"        # ή UID=...;PWD=...;
-    )
+    # Ανάκτηση στοιχείων από τα Secrets
+    server = st.secrets["mssql"]["server"]
+    port = st.secrets["mssql"]["port"]
+    database = st.secrets["mssql"]["database"]
+    username = st.secrets["mssql"]["username"]
+    password = st.secrets["mssql"]["password"]
+
+    # Έλεγχος Λειτουργικού Συστήματος (Windows vs Linux/Cloud)
+    if platform.system() == "Windows":
+        # Driver για τοπική εκτέλεση σε Windows
+        driver = "{ODBC Driver 17 for SQL Server}"
+        conn_str = f"DRIVER={driver};SERVER={server},{port};DATABASE={database};UID={username};PWD={password}"
+    else:
+        # Driver για Streamlit Cloud (Linux / FreeTDS)
+        driver = "{FreeTDS}"
+        conn_str = f"DRIVER={driver};SERVER={server};PORT={port};DATABASE={database};UID={username};PWD={password};TDS_Version=8.0;"
+
     return pyodbc.connect(conn_str)
 
 # ==========================================
