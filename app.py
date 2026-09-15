@@ -187,8 +187,8 @@ def login_screen():
 # 6. STUDENT DASHBOARD
 # ==========================================
 def student_dashboard():
-    if 'last_quiz_result' not in st.session_state:
-    st.session_state['last_quiz_result'] = None
+   if 'last_quiz_result' not in st.session_state:
+        st.session_state['last_quiz_result'] = None
     username = st.session_state['username']
     st.title(f"🎓 Καλωσόρισες, {st.session_state['firstname']}!")
     
