@@ -272,46 +272,54 @@ def student_dashboard():
 
         if attempts_count < 2:
             with st.form("quiz_form"):
-                user_answers = {}
-                for i, q in enumerate(questions):
-                    st.markdown(f"**{q['question']}**")
-                    user_answers[i] = st.radio(f"Επιλογή για την ερώτηση {i+1}:", q['options'], key=f"q_{selected_quiz_title}_{i}")
-                    st.write("---")
-                
-                submit_quiz = st.form_submit_button("🚀 Υποβολή Απαντήσεων", type="primary")
-                
-                if submit_quiz:
-                    correct_count = 0
-                    for i, q in enumerate(questions):
-                        if user_answers[i] == q['answer']:
-                            correct_count += 1
-                    
-                    final_score = (correct_count / len(questions)) * 100
-                    
-                    conn = get_db_connection()
-                    cursor = conn.cursor()
-                    cursor.execute("SELECT QuizID FROM Quizzes WHERE Title = ?", (selected_quiz_title,))
-                    quiz_row = cursor.fetchone()
-                    
-                    if quiz_row:
-                        quiz_id = quiz_row[0]
-                        cursor.execute(
-                            "INSERT INTO QuizResults (Username, QuizID, Score) VALUES (?, ?, ?)",
-                            (username, quiz_id, final_score)
-                        )
-                        conn.commit()
-                    conn.close()
-                    
-                    # 💾 Αποθήκευση αποτελέσματος στο Session State για να εμφανιστεί μετά το rerun
-                    st.session_state['last_quiz_result'] = {
-                        'quiz_title': selected_quiz_title,
-                        'score': final_score,
-                        'correct': correct_count,
-                        'total': len(questions)
-                    }
-                    
-                    # Ανανέωση σελίδας
-                    st.rerun()
+    user_answers = {}
+    for i, q in enumerate(questions):
+        st.markdown(f"**{q['question']}**")
+        # Προσθήκη index=None για να μην είναι καμία απάντηση προεπιλεγμένη
+        user_answers[i] = st.radio(
+            f"Επιλογή για την ερώτηση {i+1}:", 
+            q['options'], 
+            index=None, 
+            key=f"q_{selected_quiz_title}_{i}"
+        )
+        st.write("---")
+    
+    submit_quiz = st.form_submit_button("🚀 Υποβολή Απαντήσεων", type="primary")
+    
+    if submit_quiz:
+        # Έλεγχος αν ο μαθητής ξέχασε να απαντήσει κάποια ερώτηση
+        if None in user_answers.values():
+            st.warning("⚠️ Παρακαλώ απάντησε σε όλες τις ερωτήσεις πριν την υποβολή!")
+        else:
+            correct_count = 0
+            for i, q in enumerate(questions):
+                if user_answers[i] == q['answer']:
+                    correct_count += 1
+            
+            final_score = (correct_count / len(questions)) * 100
+            
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT QuizID FROM Quizzes WHERE Title = ?", (selected_quiz_title,))
+            quiz_row = cursor.fetchone()
+            
+            if quiz_row:
+                quiz_id = quiz_row[0]
+                cursor.execute(
+                    "INSERT INTO QuizResults (Username, QuizID, Score) VALUES (?, ?, ?)",
+                    (username, quiz_id, final_score)
+                )
+                conn.commit()
+            conn.close()
+            
+            st.session_state['last_quiz_result'] = {
+                'quiz_title': selected_quiz_title,
+                'score': final_score,
+                'correct': correct_count,
+                'total': len(questions)
+            }
+            
+            st.rerun()
     with tab2:
         st.subheader("Ιστορικό Διαγωνισμάτων")
         if not df_results.empty:
