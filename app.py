@@ -187,6 +187,8 @@ def login_screen():
 # 6. STUDENT DASHBOARD
 # ==========================================
 def student_dashboard():
+    if 'last_quiz_result' not in st.session_state:
+    st.session_state['last_quiz_result'] = None
     username = st.session_state['username']
     st.title(f"🎓 Καλωσόρισες, {st.session_state['firstname']}!")
     
@@ -228,6 +230,17 @@ def student_dashboard():
     tab1, tab2 = st.tabs(["📝 Επίλυση Quiz", "📜 Ιστορικό Βαθμολογιών"])
 
     with tab1:
+        # 📣 Εμφάνιση του τελευταίου βαθμού μετά το refresh (αν υπάρχει)
+        if st.session_state['last_quiz_result'] is not None:
+            res = st.session_state['last_quiz_result']
+            st.success(f"🎉 **Το Διαγώνισμα '{res['quiz_title']}' ολοκληρώθηκε!**")
+            st.metric(
+                label="Βαθμολογία Προσπάθειας", 
+                value=f"{res['score']:.1f} / 100", 
+                delta=f"{res['correct']}/{res['total']} σωστές απαντήσεις"
+            )
+            st.divider()
+
         st.subheader("Επίλεξε Διαγώνισμα για Επίλυση")
         selected_quiz_title = st.selectbox("Διαθέσιμα Quizzes:", list(QUIZZES.keys()))
         questions = QUIZZES[selected_quiz_title]
@@ -285,9 +298,16 @@ def student_dashboard():
                         conn.commit()
                     conn.close()
                     
-                    # Επαναφορά της σελίδας για να ενημερωθούν αμέσως τα στατιστικά
+                    # 💾 Αποθήκευση αποτελέσματος στο Session State για να εμφανιστεί μετά το rerun
+                    st.session_state['last_quiz_result'] = {
+                        'quiz_title': selected_quiz_title,
+                        'score': final_score,
+                        'correct': correct_count,
+                        'total': len(questions)
+                    }
+                    
+                    # Ανανέωση σελίδας
                     st.rerun()
-
     with tab2:
         st.subheader("Ιστορικό Διαγωνισμάτων")
         if not df_results.empty:
