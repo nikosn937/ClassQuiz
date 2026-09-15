@@ -299,10 +299,11 @@ def student_dashboard():
 # ==========================================
 def teacher_dashboard():
     st.title("👨‍🏫 Dashboard Καθηγητή")
-    st.write("Πλήρης εικόνα επιδόσεων και κατατάξεων μαθητών.")
+    st.write("Πλήρης εικόνα επιδόσεων, κατατάξεων και διαχείρισης μαθητών.")
     
     conn = get_db_connection()
     
+    # 1. Γενική Κατάταξη
     all_ranks_query = """
         SELECT 
             c.ClassGroup AS [Τμήμα],
@@ -310,13 +311,14 @@ def teacher_dashboard():
             c.FirstName AS [Όνομα],
             c.AvgScore AS [Μέσος Όρος],
             c.ClassRank AS [Θέση Τμήματος],
-            o.OverallRank AS [Θέση Σειράς]
+            o.OverallRank AS [Θέση Τάξης]
         FROM vw_ClassRankings c
         JOIN vw_OverallRankings o ON c.Username = o.Username
         ORDER BY c.ClassGroup, c.ClassRank
     """
     df_all_ranks = pd.read_sql(all_ranks_query, conn)
     
+    # 2. Αναλυτικά Αποτελέσματα Quizzes
     all_results_query = """
         SELECT 
             s.ClassGroup AS [Τμήμα],
@@ -330,37 +332,71 @@ def teacher_dashboard():
         ORDER BY qr.CompletedAt DESC
     """
     df_all_results = pd.read_sql(all_results_query, conn)
+
+    # 3. Στοιχεία Σύνδεσης Μαθητών (Usernames & Passwords)
+    credentials_query = """
+        SELECT 
+            ClassGroup AS [Τμήμα],
+            LastName AS [Επώνυμο],
+            FirstName AS [Όνομα],
+            Username AS [Όνομα Χρήστη],
+            Password AS [Κωδικός Πρόσβασης]
+        FROM Students
+        WHERE Role = 'STUDENT'
+        ORDER BY ClassGroup, LastName, FirstName
+    """
+    df_credentials = pd.read_sql(credentials_query, conn)
     conn.close()
 
     # Sidebar Filter
     st.sidebar.header("🔍 Φίλτρα")
-    class_list = ["Όλα τα Τμήματα"] + sorted(df_all_ranks['Τμήμα'].unique().tolist()) if not df_all_ranks.empty else ["Όλα τα Τμήματα"]
+    class_list = ["Όλα τα Τμήματα"] + sorted(df_credentials['Τμήμα'].unique().tolist()) if not df_credentials.empty else ["Όλα τα Τμήματα"]
     selected_class = st.sidebar.selectbox("Επιλογή Τμήματος", class_list)
 
+    # Φιλτράρισμα Δεδομένων
     if selected_class != "Όλα τα Τμήματα":
-        filtered_ranks = df_all_ranks[df_all_ranks['Τμήμα'] == selected_class]
-        filtered_results = df_all_results[df_all_results['Τμήμα'] == selected_class]
+        filtered_ranks = df_all_ranks[df_all_ranks['Τμήμα'] == selected_class] if not df_all_ranks.empty else df_all_ranks
+        filtered_results = df_all_results[df_all_results['Τμήμα'] == selected_class] if not df_all_results.empty else df_all_results
+        filtered_credentials = df_credentials[df_credentials['Τμήμα'] == selected_class] if not df_credentials.empty else df_credentials
     else:
         filtered_ranks = df_all_ranks
         filtered_results = df_all_results
+        filtered_credentials = df_credentials
 
-    tab1, tab2 = st.tabs(["🏆 Γενική Κατάταξη & Μ.Ο.", "📝 Αναλυτικά Αποτελέσματα Quiz"])
+    # Δημιουργία 3 Tabs
+    tab1, tab2, tab3 = st.tabs(["🏆 Γενική Κατάταξη & Μ.Ο.", "📝 Αναλυτικά Αποτελέσματα Quiz", "🔑 Στοιχεία Σύνδεσης Μαθητών"])
 
     with tab1:
         st.subheader(f"Πίνακας Κατάταξης ({selected_class})")
         st.dataframe(filtered_ranks, use_container_width=True)
         
-        csv = filtered_ranks.to_csv(index=False).encode('utf-8-sig')
-        st.download_button(
-            label="📥 Εξαγωγή Κατάταξης σε CSV",
-            data=csv,
-            file_name=f'rankings_{selected_class}.csv',
-            mime='text/csv',
-        )
+        if not filtered_ranks.empty:
+            csv = filtered_ranks.to_csv(index=False).encode('utf-8-sig')
+            st.download_button(
+                label="📥 Εξαγωγή Κατάταξης σε CSV",
+                data=csv,
+                file_name=f'rankings_{selected_class}.csv',
+                mime='text/csv',
+            )
 
     with tab2:
         st.subheader(f"Αποτελέσματα Διαγωνισμάτων ({selected_class})")
         st.dataframe(filtered_results, use_container_width=True)
+
+    with tab3:
+        st.subheader(f"🔑 Στοιχεία Σύνδεσης Μαθητών ({selected_class})")
+        st.info("ℹ️ Χρησιμοποίησε αυτόν τον πίνακα για να δώσεις τα Usernames και τους Κωδικούς στους μαθητές κατά την έναρξη του μαθήματος.")
+        
+        st.dataframe(filtered_credentials, use_container_width=True)
+        
+        if not filtered_credentials.empty:
+            csv_creds = filtered_credentials.to_csv(index=False).encode('utf-8-sig')
+            st.download_button(
+                label="📥 Εξαγωγή Στοιχείων Σύνδεσης σε CSV (για Εκτύπωση)",
+                data=csv_creds,
+                file_name=f'passwords_{selected_class}.csv',
+                mime='text/csv',
+            )
 
 # ==========================================
 # 8. MAIN ROUTER & LOGOUT
