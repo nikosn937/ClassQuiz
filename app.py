@@ -321,7 +321,9 @@ def teacher_dashboard():
     # 2. Αναλυτικά Αποτελέσματα Quizzes
     all_results_query = """
         SELECT 
+            qr.ResultID,
             s.ClassGroup AS [Τμήμα],
+            s.Username,
             s.LastName + ' ' + s.FirstName AS [Μαθητής],
             q.Title AS [Διαγώνισμα],
             qr.Score AS [Βαθμός],
@@ -333,7 +335,7 @@ def teacher_dashboard():
     """
     df_all_results = pd.read_sql(all_results_query, conn)
 
-    # 3. Στοιχεία Σύνδεσης Μαθητών (Usernames & Passwords)
+    # 3. Στοιχεία Σύνδεσης Μαθητών
     credentials_query = """
         SELECT 
             ClassGroup AS [Τμήμα],
@@ -363,8 +365,13 @@ def teacher_dashboard():
         filtered_results = df_all_results
         filtered_credentials = df_credentials
 
-    # Δημιουργία 3 Tabs
-    tab1, tab2, tab3 = st.tabs(["🏆 Γενική Κατάταξη & Μ.Ο.", "📝 Αναλυτικά Αποτελέσματα Quiz", "🔑 Στοιχεία Σύνδεσης Μαθητών"])
+    # 4 Tabs
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "🏆 Γενική Κατάταξη & Μ.Ο.", 
+        "📝 Αναλυτικά Αποτελέσματα Quiz", 
+        "🔑 Στοιχεία Σύνδεσης", 
+        "🗑️ Επανυποβολή / Διαγραφή Quiz"
+    ])
 
     with tab1:
         st.subheader(f"Πίνακας Κατάταξης ({selected_class})")
@@ -381,23 +388,72 @@ def teacher_dashboard():
 
     with tab2:
         st.subheader(f"Αποτελέσματα Διαγωνισμάτων ({selected_class})")
-        st.dataframe(filtered_results, use_container_width=True)
+        # Εμφάνιση χωρίς τη στήλη ResultID & Username στον απλό πίνακα
+        display_results = filtered_results.drop(columns=['ResultID', 'Username'], errors='ignore')
+        st.dataframe(display_results, use_container_width=True)
 
     with tab3:
         st.subheader(f"🔑 Στοιχεία Σύνδεσης Μαθητών ({selected_class})")
-        st.info("ℹ️ Χρησιμοποίησε αυτόν τον πίνακα για να δώσεις τα Usernames και τους Κωδικούς στους μαθητές κατά την έναρξη του μαθήματος.")
-        
+        st.info("ℹ️ Χρησιμοποίησε αυτόν τον πίνακα για να δώσεις τα Usernames και τους Κωδικούς στους μαθητές.")
         st.dataframe(filtered_credentials, use_container_width=True)
         
         if not filtered_credentials.empty:
             csv_creds = filtered_credentials.to_csv(index=False).encode('utf-8-sig')
             st.download_button(
-                label="📥 Εξαγωγή Στοιχείων Σύνδεσης σε CSV (για Εκτύπωση)",
+                label="📥 Εξαγωγή Στοιχείων Σύνδεσης σε CSV",
                 data=csv_creds,
                 file_name=f'passwords_{selected_class}.csv',
                 mime='text/csv',
             )
 
+    with tab4:
+        st.subheader("🗑️ Διαγραφή Προσπάθειας Μαθητή (Επανεξέταση)")
+        st.warning("⚠️ Η διαγραφή προσπάθειας θα επιτρέψει στον μαθητή να ξανακάνει το συγκεκριμένο Quiz.")
+
+        if not filtered_results.empty:
+            # Επιλογή Μαθητή
+            students_list = sorted(filtered_results['Μαθητής'].unique().tolist())
+            selected_student_name = st.selectbox("Επιλογή Μαθητή:", students_list)
+
+            # Φιλτράρισμα προσπαθειών του συγκεκριμένου μαθητή
+            student_attempts = filtered_results[filtered_results['Μαθητής'] == selected_student_name]
+
+            if not student_attempts.empty:
+                # Επιλογή Quiz του μαθητή
+                quizzes_list = sorted(student_attempts['Διαγώνισμα'].unique().tolist())
+                selected_quiz = st.selectbox("Επιλογή Διαγωνίσματος για Διαγραφή:", quizzes_list)
+
+                # Εμφάνιση συγκεκριμένων εγγραφών
+                target_attempts = student_attempts[student_attempts['Διαγώνισμα'] == selected_quiz]
+                
+                st.write("**Καταγεγραμμένες Προσπάθειες:**")
+                st.dataframe(target_attempts[['Μαθητής', 'Διαγώνισμα', 'Βαθμός', 'Ημερομηνία']], use_container_width=True)
+
+                col_del1, col_del2 = st.columns([1, 2])
+                with col_del1:
+                    if st.button("❌ Διαγραφή Όλων των Προσπαθειών για αυτό το Quiz", type="primary"):
+                        conn = get_db_connection()
+                        cursor = conn.cursor()
+                        
+                        # Βρίσκουμε το QuizID
+                        cursor.execute("SELECT QuizID FROM Quizzes WHERE Title = ?", (selected_quiz,))
+                        quiz_id = cursor.fetchone()[0]
+                        username_to_del = target_attempts.iloc[0]['Username']
+
+                        # Διαγραφή από τη βάση
+                        cursor.execute(
+                            "DELETE FROM QuizResults WHERE Username = ? AND QuizID = ?", 
+                            (username_to_del, quiz_id)
+                        )
+                        conn.commit()
+                        conn.close()
+
+                        st.success(f"Οι προσπάθειες του μαθητή {selected_student_name} για το '{selected_quiz}' διαγράφηκαν!")
+                        st.rerun()
+            else:
+                st.info("Ο μαθητής δεν έχει υποβάλει ακόμη κάποιο διαγώνισμα.")
+        else:
+            st.info("Δεν υπάρχουν υποβληθέντα διαγωνίσματα για διαγραφή.")
 # ==========================================
 # 8. MAIN ROUTER & LOGOUT
 # ==========================================
