@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import pyodbc
 import platform
+from streamlit_autorefresh import st_autorefresh
 
 # ==========================================
 # 1. DATABASE CONNECTION & INITIALIZATION
@@ -298,9 +299,14 @@ def student_dashboard():
 # 7. TEACHER DASHBOARD
 # ==========================================
 def teacher_dashboard():
-    st.title("👨‍🏫 Dashboard Καθηγητή")
-    st.write("Πλήρης εικόνα επιδόσεων, κατατάξεων και διαχείρισης μαθητών.")
+    # Αυτόματη ανανέωση της σελίδας του καθηγητή κάθε 10 δευτερόλεπτα (10000ms)
+    # Το key εμποδίζει το επαναλαμβανόμενο reset του state
+    st_autorefresh(interval=10000, key="teacher_dashboard_autorefresh")
     
+    st.title("👨‍🏫 Dashboard Καθηγητή")
+    st.write("Πλήρης εικόνα επιδόσεων, κατατάξεων και διαχείρισης μαθητών (Ζωντανή Ενημέρωση 🔄).")
+    
+   
     conn = get_db_connection()
     
     # 1. Γενική Κατάταξη
