@@ -313,7 +313,8 @@ if submit_quiz:
         final_score = (correct_count / len(questions)) * 100
         cursor.execute("INSERT INTO QuizResults (Username, QuizID, Score) VALUES (?, ?, ?)", (username, quiz_id, final_score))
         conn.commit()
-        conn.close()    with tab2:
+        conn.close()    
+        with tab2:
         st.subheader("Ιστορικό Διαγωνισμάτων")
         if not df_results.empty:
             st.dataframe(df_results, use_container_width=True)
