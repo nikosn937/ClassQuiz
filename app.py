@@ -287,41 +287,33 @@ def student_dashboard():
                 submit_quiz = st.form_submit_button("🚀 Υποβολή Απαντήσεων", type="primary")
                 
             # Ο έλεγχος υποβολής μπαίνει έξω από το with st.form
-            if submit_quiz:
-                if None in user_answers.values():
-                    st.warning("⚠️ Παρακαλώ απάντησε σε όλες τις ερωτήσεις πριν την υποβολή!")
-                else:
-                    correct_count = 0
-                    for i, q in enumerate(questions):
-                        if user_answers[i] == q['answer']:
-                            correct_count += 1
-                    
-                    final_score = (correct_count / len(questions)) * 100
-                    
-                    conn = get_db_connection()
-                    cursor = conn.cursor()
-                    cursor.execute("SELECT QuizID FROM Quizzes WHERE Title = ?", (selected_quiz_title,))
-                    quiz_row = cursor.fetchone()
-                    
-                    if quiz_row:
-                        quiz_id = quiz_row[0]
-                        cursor.execute(
-                            "INSERT INTO QuizResults (Username, QuizID, Score) VALUES (?, ?, ?)",
-                            (username, quiz_id, final_score)
-                        )
-                        conn.commit()
-                    conn.close()
-                    
-                    # Αποθήκευση αποτελέσματος για το επόμενο render
-                    st.session_state['last_quiz_result'] = {
-                        'quiz_title': selected_quiz_title,
-                        'score': final_score,
-                        'correct': correct_count,
-                        'total': len(questions)
-                    }
-                    
-                    st.rerun()
-    with tab2:
+if submit_quiz:
+    if None in user_answers.values():
+        st.warning("⚠️ Παρακαλώ απάντησε σε όλες τις ερωτήσεις πριν την υποβολή!")
+    else:
+        correct_count = 0
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Εύρεση QuizID
+        cursor.execute("SELECT QuizID FROM Quizzes WHERE Title = ?", (selected_quiz_title,))
+        quiz_id = cursor.fetchone()[0]
+        
+        # Καταγραφή επιμέρους απαντήσεων
+        for i, q in enumerate(questions):
+            is_correct = (user_answers[i] == q['answer'])
+            if is_correct:
+                correct_count += 1
+            
+            cursor.execute("""
+                INSERT INTO StudentAnswers (Username, QuizID, QuestionIndex, IsCorrect)
+                VALUES (?, ?, ?, ?)
+            """, (username, quiz_id, i, 1 if is_correct else 0))
+
+        final_score = (correct_count / len(questions)) * 100
+        cursor.execute("INSERT INTO QuizResults (Username, QuizID, Score) VALUES (?, ?, ?)", (username, quiz_id, final_score))
+        conn.commit()
+        conn.close()    with tab2:
         st.subheader("Ιστορικό Διαγωνισμάτων")
         if not df_results.empty:
             st.dataframe(df_results, use_container_width=True)
@@ -493,6 +485,44 @@ def teacher_dashboard():
                 st.info("Ο μαθητής δεν έχει υποβάλει ακόμη κάποιο διαγώνισμα.")
         else:
             st.info("Δεν υπάρχουν υποβληθέντα διαγωνίσματα για διαγραφή.")
+# Μέσα στη συνάρτηση teacher_dashboard():
+
+with tab_analytics:
+    st.subheader("📊 Αναφορά Αδυναμιών & Λανθασμένων Απαντήσεων")
+    
+    conn = get_db_connection()
+    # Ερώτημα για το ποιοι μαθητές δυσκολεύονται σε ποιες ερωτήσεις
+    weakness_query = """
+        SELECT 
+            s.LastName + ' ' + s.FirstName AS [Μαθητής],
+            q.Title AS [Διαγώνισμα],
+            sa.QuestionIndex AS [Αριθμός Ερώτησης],
+            COUNT(*) AS [Συνολικές Λάθος Απαντήσεις]
+        FROM StudentAnswers sa
+        JOIN Students s ON sa.Username = s.Username
+        JOIN Quizzes q ON sa.QuizID = q.QuizID
+        WHERE sa.IsCorrect = 0
+        GROUP BY s.LastName, s.FirstName, q.Title, sa.QuestionIndex
+        ORDER BY [Συνολικές Λάθος Απαντήσεις] DESC
+    """
+    df_weakness = pd.read_sql(weakness_query, conn)
+    conn.close()
+
+    if not df_weakness.empty:
+        # 1. Προβολή ανά Μαθητή
+        selected_student = st.selectbox("Επιλογή Μαθητή για Διαγνωστικό Έλεγχο:", df_weakness['Μαθητής'].unique())
+        student_issues = df_weakness[df_weakness['Μαθητής'] == selected_student]
+        
+        st.write(f"**Σημεία που χρειάζεται ενίσχυση ο/η {selected_student}:**")
+        for idx, row in student_issues.iterrows():
+            q_title = row['Διαγώνισμα']
+            q_idx = row['Αριθμός Ερώτησης']
+            # Ανάκτηση του κειμένου της ερώτησης από το λεξικό QUIZZES
+            q_text = QUIZZES[q_title][q_idx]['question']
+            
+            st.error(f"❌ **{q_title}** — *Ερώτηση {q_idx + 1}:* {q_text} (Λάθος προσπάθειες: {row['Συνολικές Λάθος Απαντήσεις']})")
+    else:
+        st.success("🎉 Δεν υπάρχουν καταγεγραμμένες αδυναμίες ή δεν έχουν υποβληθεί ακόμη απαντήσεις!")
 # ==========================================
 # 8. MAIN ROUTER & LOGOUT
 # ==========================================
