@@ -270,7 +270,7 @@ def student_dashboard():
         else:
             st.error(f"🚫 Έχεις συμπληρώσει το όριο των **2 προσπαθειών** για αυτό το Quiz! Ο καλύτερος βαθμός σου είναι **{best_score:.1f}/100**.")
 
-        if attempts_count < 2:
+if attempts_count < 2:
             with st.form("quiz_form"):
                 user_answers = {}
                 for i, q in enumerate(questions):
@@ -285,41 +285,58 @@ def student_dashboard():
                     st.write("---")
                 
                 submit_quiz = st.form_submit_button("🚀 Υποβολή Απαντήσεων", type="primary")
-                
-            # Ο έλεγχος υποβολής μπαίνει έξω από το with st.form
-if submit_quiz:
-    if None in user_answers.values():
-        st.warning("⚠️ Παρακαλώ απάντησε σε όλες τις ερωτήσεις πριν την υποβολή!")
-    else:
-        correct_count = 0
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # Εύρεση QuizID
-        cursor.execute("SELECT QuizID FROM Quizzes WHERE Title = ?", (selected_quiz_title,))
-        quiz_id = cursor.fetchone()[0]
-        
-        # Καταγραφή επιμέρους απαντήσεων
-        for i, q in enumerate(questions):
-            is_correct = (user_answers[i] == q['answer'])
-            if is_correct:
-                correct_count += 1
             
-            cursor.execute("""
-                INSERT INTO StudentAnswers (Username, QuizID, QuestionIndex, IsCorrect)
-                VALUES (?, ?, ?, ?)
-            """, (username, quiz_id, i, 1 if is_correct else 0))
+            # Ο έλεγχος υποβολής βρίσκεται στη σωστή στοίχιση (μέσα στο if attempts_count < 2)
+            if submit_quiz:
+                if None in user_answers.values():
+                    st.warning("⚠️ Παρακαλώ απάντησε σε όλες τις ερωτήσεις πριν την υποβολή!")
+                else:
+                    correct_count = 0
+                    conn = get_db_connection()
+                    cursor = conn.cursor()
+                    
+                    # Εύρεση QuizID
+                    cursor.execute("SELECT QuizID FROM Quizzes WHERE Title = ?", (selected_quiz_title,))
+                    quiz_row = cursor.fetchone()
+                    
+                    if quiz_row:
+                        quiz_id = quiz_row[0]
+                        
+                        # Καταγραφή επιμέρους απαντήσεων
+                        for i, q in enumerate(questions):
+                            is_correct = (user_answers[i] == q['answer'])
+                            if is_correct:
+                                correct_count += 1
+                            
+                            cursor.execute("""
+                                INSERT INTO StudentAnswers (Username, QuizID, QuestionIndex, IsCorrect)
+                                VALUES (?, ?, ?, ?)
+                            """, (username, quiz_id, i, 1 if is_correct else 0))
 
-        final_score = (correct_count / len(questions)) * 100
-        cursor.execute("INSERT INTO QuizResults (Username, QuizID, Score) VALUES (?, ?, ?)", (username, quiz_id, final_score))
-        conn.commit()
-        conn.close()    
-        with tab2:
-            st.subheader("Ιστορικό Διαγωνισμάτων")
-            if not df_results.empty:
-                st.dataframe(df_results, use_container_width=True)
-            else:
-                st.info("Δεν έχεις υποβάλει ακόμη κάποιο διαγώνισμα.")
+                        final_score = (correct_count / len(questions)) * 100
+                        cursor.execute("INSERT INTO QuizResults (Username, QuizID, Score) VALUES (?, ?, ?)", (username, quiz_id, final_score))
+                        conn.commit()
+                    
+                    conn.close()
+                    
+                    # Αποθήκευση αποτελέσματος στο Session State
+                    st.session_state['last_quiz_result'] = {
+                        'quiz_title': selected_quiz_title,
+                        'score': final_score,
+                        'correct': correct_count,
+                        'total': len(questions)
+                    }
+                    
+                    # Επαναφορά της σελίδας
+                    st.rerun()
+
+    # Το tab2 ξεκινάει ΕΞΩ από το tab1
+    with tab2:
+        st.subheader("Ιστορικό Διαγωνισμάτων")
+        if not df_results.empty:
+            st.dataframe(df_results, use_container_width=True)
+        else:
+            st.info("Δεν έχεις υποβάλει ακόμη κάποιο διαγώνισμα.")
 # ==========================================
 # 7. TEACHER DASHBOARD
 # ==========================================
