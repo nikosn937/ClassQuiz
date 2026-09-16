@@ -315,11 +315,11 @@ if submit_quiz:
         conn.commit()
         conn.close()    
         with tab2:
-        st.subheader("Ιστορικό Διαγωνισμάτων")
-        if not df_results.empty:
-            st.dataframe(df_results, use_container_width=True)
-        else:
-            st.info("Δεν έχεις υποβάλει ακόμη κάποιο διαγώνισμα.")
+            st.subheader("Ιστορικό Διαγωνισμάτων")
+            if not df_results.empty:
+                st.dataframe(df_results, use_container_width=True)
+            else:
+                st.info("Δεν έχεις υποβάλει ακόμη κάποιο διαγώνισμα.")
 
 # ==========================================
 # 7. TEACHER DASHBOARD
