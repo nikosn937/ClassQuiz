@@ -4,5 +4,3 @@ sqlalchemy
 pymssql
 pyodbc
 streamlit-autorefresh
-freetds-bin
-tdsodbc
