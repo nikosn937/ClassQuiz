@@ -181,14 +181,15 @@ QUIZZES = {
             "answer": "Στην εντολή 4 (πρέπει να στρίψει δεξιά 120°)",
         },
     ],
-    "Γ.7.Μ2: Αναπαράσταση Αλγορίθμων με Λογικά Διαγράμματα": [
+   "Γ.7.Μ2: Αναπαράσταση Αλγορίθμων με Λογικά Διαγράμματα": [
         {
-           "question": "1. Ποια λειτουργία αντιπροσωπεύει το παρακάτω σύμβολο λογικού διαγράμματος;",
-            "mermaid": """
-                graph TD
-                    A[/ Είσοδος / Έξοδος /]
+            "question": "1. Ποια λειτουργία αντιπροσωπεύει το παρακάτω σύμβολο λογικού διαγράμματος;",
+            "dot": """
+                digraph {
+                    node [fontname="Arial"];
+                    A [label="  Είσοδος / Έξοδος  ", shape=parallelogram, style=filled, fillcolor="#E3F2FD"];
+                }
             """,
-            "height": 100,
             "options": [
                 "Εισαγωγή δεδομένων (Διάβασε) ή Εξαγωγή αποτελεσμάτων (Τύπωσε)",
                 "Εκτέλεση αριθμητικών υπολογισμών και εκχωρήσεων",
@@ -199,11 +200,17 @@ QUIZZES = {
         },
         {
             "question": "2. Για την εκτέλεση της εντολής υπολογισμού x = a + b, ποιο από τα παρακάτω σύμβολα πρέπει να χρησιμοποιηθεί;",
-            "mermaid": """
-                graph LR
-                    A([Έλλειψη]) --- B[Ορθογώνιο] --- C[/Παραλληλόγραμμο/] --- D{Ρόμβος}
+            "dot": """
+                digraph {
+                    rankdir=LR;
+                    node [fontname="Arial"];
+                    A [label="Έλλειψη", shape=oval, style=filled, fillcolor="#FFEBEE"];
+                    B [label="Ορθογώνιο", shape=box, style=filled, fillcolor="#E8F5E9"];
+                    C [label="Παραλληλόγραμμο", shape=parallelogram, style=filled, fillcolor="#E3F2FD"];
+                    D [label="Ρόμβος", shape=diamond, style=filled, fillcolor="#FFF3E0"];
+                    A -> B -> C -> D [style=invis];
+                }
             """,
-            "height": 120,
             "options": [
                 "Ορθογώνιο",
                 "Παραλληλόγραμμο",
@@ -214,11 +221,12 @@ QUIZZES = {
         },
         {
             "question": "3. Ποιος είναι ο ρόλος του παρακάτω συμβόλου (Ρόμβος) σε ένα Διάγραμμα Ροής;",
-            "mermaid": """
-                graph TD
-                    A{ x > 0 ; }
+            "dot": """
+                digraph {
+                    node [fontname="Arial"];
+                    A [label=" x > 0 ; ", shape=diamond, style=filled, fillcolor="#FFF3E0"];
+                }
             """,
-            "height": 120,
             "options": [
                 "Έλεγχο συνθήκης / Λήψη απόφασης",
                 "Εισαγωγή τιμών από το πληκτρολόγιο",
@@ -229,14 +237,18 @@ QUIZZES = {
         },
         {
             "question": "4. Μελέτησε το παρακάτω Διάγραμμα Ροής. Αν δώσουμε ως είσοδο τον αριθμό x = 4, ποια τιμή θα τυπωθεί στην οθόνη;",
-            "mermaid": """
-                graph TD
-                    A([Αρχή]) --> B[/Διάβασε x/]
-                    B --> C[y = x * 2 + 1]
-                    C --> D[/Τύπωσε y/]
-                    D --> E([Τέλος])
+            "dot": """
+                digraph {
+                    node [fontname="Arial"];
+                    A [label="Αρχή", shape=oval, style=filled, fillcolor="#E8F5E9"];
+                    B [label="Διάβασε x", shape=parallelogram, style=filled, fillcolor="#E3F2FD"];
+                    C [label="y = x * 2 + 1", shape=box, style=filled, fillcolor="#FFFDE7"];
+                    D [label="Τύπωσε y", shape=parallelogram, style=filled, fillcolor="#E3F2FD"];
+                    E [label="Τέλος", shape=oval, style=filled, fillcolor="#FFEBEE"];
+
+                    A -> B -> C -> D -> E;
+                }
             """,
-            "height": 320,
             "options": [
                 "9",
                 "8",
@@ -247,16 +259,23 @@ QUIZZES = {
         },
         {
             "question": "5. Παρατήρησε το παρακάτω Διάγραμμα Ροής. Ποιο είναι το αποτέλεσμα αν δώσουμε x = 10;",
-            "mermaid": """
-                graph TD
-                    A([Αρχή]) --> B[/Διάβασε x/]
-                    B --> C{ x >= 10 }
-                    C -- ΝΑΙ --> D[/Τύπωσε 'Εγκρίθηκε'/]
-                    C -- ΟΧΙ --> E[/Τύπωσε 'Απορρίφθηκε'/]
-                    D --> F([Τέλος])
-                    E --> F
+            "dot": """
+                digraph {
+                    node [fontname="Arial"];
+                    A [label="Αρχή", shape=oval, style=filled, fillcolor="#E8F5E9"];
+                    B [label="Διάβασε x", shape=parallelogram, style=filled, fillcolor="#E3F2FD"];
+                    C [label="x >= 10 ;", shape=diamond, style=filled, fillcolor="#FFF3E0"];
+                    D [label="Τύπωσε 'Εγκρίθηκε'", shape=parallelogram, style=filled, fillcolor="#E3F2FD"];
+                    E [label="Τύπωσε 'Απορρίφθηκε'", shape=parallelogram, style=filled, fillcolor="#E3F2FD"];
+                    F [label="Τέλος", shape=oval, style=filled, fillcolor="#FFEBEE"];
+
+                    A -> B -> C;
+                    C -> D [label=" ΝΑΙ "];
+                    C -> E [label=" ΟΧΙ "];
+                    D -> F;
+                    E -> F;
+                }
             """,
-            "height": 360,
             "options": [
                 "Εγκρίθηκε",
                 "Απορρίφθηκε",
@@ -266,29 +285,39 @@ QUIZZES = {
             "answer": "Εγκρίθηκε",
         },
         {
-            "question": "6. Ποιο από τα παρακάτω διαγράμματα αναπαριστά ΣΩΣΤΑ τη διαδικασία: 'Διάβασε έναν αριθμό A, υπολόγισε το διπλάσιο B = A * 2 και Τύπωσε το B';",
-            "mermaid": """
-                graph TD
-                    subgraph Διάγραμμα 1
-                        A1([Αρχή]) --> B1[/Διάβασε A/] --> C1[B = A * 2] --> D1[/Τύπωσε B/] --> E1([Τέλος])
-                    end
+            "question": "6. Ποια είναι η σωστή σειρά συμβόλων για τη διαδικασία: 'Διάβασε A ➔ Υπολόγισε B = A * 2 ➔ Τύπωσε B';",
+            "dot": """
+                digraph {
+                    node [fontname="Arial"];
+                    A [label="Αρχή", shape=oval];
+                    B [label="Διάβασε A", shape=parallelogram];
+                    C [label="B = A * 2", shape=box];
+                    D [label="Τύπωσε B", shape=parallelogram];
+                    E [label="Τέλος", shape=oval];
+
+                    A -> B -> C -> D -> E;
+                }
             """,
-            "height": 320,
             "options": [
-                "Το Διάγραμμα 1 (Έλλειψη ➔ Παραλληλόγραμμο ➔ Ορθογώνιο ➔ Παραλληλόγραμμο ➔ Έλλειψη)",
-                "Ένα διάγραμμα που χρησιμοποιεί μόνο Ρόμβους",
-                "Ένα διάγραμμα που χρησιμοποιεί Ορθογώνιο για το 'Διάβασε A'",
-                "Ένα διάγραμμα χωρίς σύμβολα Αρχής και Τέλους",
+                "Έλλειψη ➔ Παραλληλόγραμμο ➔ Ορθογώνιο ➔ Παραλληλόγραμμο ➔ Έλλειψη",
+                "Έλλειψη ➔ Ορθογώνιο ➔ Παραλληλόγραμμο ➔ Έλλειψη",
+                "Παραλληλόγραμμο ➔ Ρόμβος ➔ Ορθογώνιο ➔ Έλλειψη",
+                "Έλλειψη ➔ Ρόμβος ➔ Ορθογώνιο ➔ Έλλειψη",
             ],
-            "answer": "Το Διάγραμμα 1 (Έλλειψη ➔ Παραλληλόγραμμο ➔ Ορθογώνιο ➔ Παραλληλόγραμμο ➔ Έλλειψη)",
+            "answer": "Έλλειψη ➔ Παραλληλόγραμμο ➔ Ορθογώνιο ➔ Παραλληλόγραμμο ➔ Έλλειψη",
         },
         {
             "question": "7. Αν σε ένα Διάγραμμα Ροής εκτελεστεί η παρακάτω αλληλουχία εντολών, ποια θα είναι η τελική τιμή της μεταβλητής A;",
-            "mermaid": """
-                graph TD
-                    A[A = 5] --> B[B = 3] --> C[A = A + B]
+            "dot": """
+                digraph {
+                    node [fontname="Arial", shape=box, style=filled, fillcolor="#FFFDE7"];
+                    A [label="A = 5"];
+                    B [label="B = 3"];
+                    C [label="A = A + B"];
+
+                    A -> B -> C;
+                }
             """,
-            "height": 220,
             "options": [
                 "8",
                 "5",
@@ -299,11 +328,12 @@ QUIZZES = {
         },
         {
             "question": "8. Τι εκφράζει μια Μεταβλητή (όπως το 'x' στο παρακάτω διάγραμμα) στην Πληροφορική;",
-            "mermaid": """
-                graph LR
-                    A[Μεταβλητή x = 15]
+            "dot": """
+                digraph {
+                    node [fontname="Arial", shape=box, style=filled, fillcolor="#E3F2FD"];
+                    A [label="Μεταβλητή x = 15"];
+                }
             """,
-            "height": 100,
             "options": [
                 "Μια θέση στη μνήμη του υπολογιστή με όνομα, της οποίας το περιεχόμενο μπορεί να μεταβάλλεται",
                 "Έναν σταθερό αριθμό που δεν μπορεί να αλλάξει ποτέ",
@@ -314,7 +344,6 @@ QUIZZES = {
         },
     ],
 }
-
 
 # ==========================================
 # 3. HELPER: SEED QUIZZES TO DB
