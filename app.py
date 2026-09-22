@@ -1,3 +1,4 @@
+import base64
 import platform
 import pandas as pd
 import pyodbc
@@ -5,6 +6,95 @@ import streamlit as st
 import streamlit.components.v1 as components
 from streamlit_autorefresh import st_autorefresh
 
+
+# ==========================================
+# 0. HELPER FUNCTIONS FOR SVG SHAPES & FLOWCHARTS
+# ==========================================
+def svg_to_data_url(svg_str: str) -> str:
+    """Μετατρέπει ένα SVG string σε Base64 Data URL για χρήση στο st.image()"""
+    encoded = base64.b64encode(svg_str.encode("utf-8")).decode("utf-8")
+    return f"data:image/svg+xml;base64,{encoded}"
+
+
+def draw_svg_shape(shape_type: str, text: str = "") -> str:
+    """Παράγει καθαρό SVG string για τα σχήματα/διαγράμματα."""
+    if shape_type == "parallelogram":
+        return f"""<svg width="220" height="70" xmlns="http://www.w3.org/2000/svg">
+            <polygon points="30,10 210,10 190,60 10,60" fill="#E3F2FD" stroke="#1E88E5" stroke-width="2"/>
+            <text x="110" y="40" font-family="Arial, sans-serif" font-size="13" text-anchor="middle" fill="#0D47A1">{text}</text>
+        </svg>"""
+
+    elif shape_type == "rhombus":
+        return f"""<svg width="220" height="90" xmlns="http://www.w3.org/2000/svg">
+            <polygon points="110,5 210,45 110,85 10,45" fill="#FFF3E0" stroke="#FB8C00" stroke-width="2"/>
+            <text x="110" y="50" font-family="Arial, sans-serif" font-size="13" text-anchor="middle" fill="#E65100">{text}</text>
+        </svg>"""
+
+    elif shape_type == "shapes_row":
+        return """<svg width="450" height="70" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="40" cy="35" rx="35" ry="20" fill="#FFEBEE" stroke="#E53935" stroke-width="2"/>
+            <text x="40" y="39" font-family="Arial, sans-serif" font-size="11" text-anchor="middle">Έλλειψη</text>
+            <rect x="95" y="15" width="80" height="40" rx="3" fill="#E8F5E9" stroke="#43A047" stroke-width="2"/>
+            <text x="135" y="39" font-family="Arial, sans-serif" font-size="11" text-anchor="middle">Ορθογώνιο</text>
+            <polygon points="200,15 280,15 265,55 185,55" fill="#E3F2FD" stroke="#1E88E5" stroke-width="2"/>
+            <text x="230" y="39" font-family="Arial, sans-serif" font-size="10" text-anchor="middle">Παραλληλόγραμμο</text>
+            <polygon points="340,15 385,35 340,55 295,35" fill="#FFF3E0" stroke="#FB8C00" stroke-width="2"/>
+            <text x="340" y="39" font-family="Arial, sans-serif" font-size="11" text-anchor="middle">Ρόμβος</text>
+        </svg>"""
+
+    elif shape_type == "flowchart_calc":
+        return """<svg width="200" height="240" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="100" cy="25" rx="45" ry="18" fill="#E8F5E9" stroke="#43A047" stroke-width="2"/>
+            <text x="100" y="29" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">Αρχή</text>
+            <line x1="100" y1="43" x2="100" y2="60" stroke="#333" stroke-width="2"/>
+            <polygon points="25,60 175,60 160,95 10,95" fill="#E3F2FD" stroke="#1E88E5" stroke-width="2"/>
+            <text x="92" y="82" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">Διάβασε x</text>
+            <line x1="100" y1="95" x2="100" y2="115" stroke="#333" stroke-width="2"/>
+            <rect x="25" y="115" width="150" height="35" rx="3" fill="#FFFDE7" stroke="#FDD835" stroke-width="2"/>
+            <text x="100" y="137" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">y = x * 2 + 1</text>
+            <line x1="100" y1="150" x2="100" y2="170" stroke="#333" stroke-width="2"/>
+            <polygon points="25,170 175,170 160,205 10,205" fill="#E3F2FD" stroke="#1E88E5" stroke-width="2"/>
+            <text x="92" y="192" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">Τύπωσε y</text>
+            <line x1="100" y1="205" x2="100" y2="220" stroke="#333" stroke-width="2"/>
+            <ellipse cx="100" cy="230" rx="45" ry="10" fill="#FFEBEE" stroke="#E53935" stroke-width="2"/>
+            <text x="100" y="233" font-family="Arial, sans-serif" font-size="10" text-anchor="middle">Τέλος</text>
+        </svg>"""
+
+    elif shape_type == "flowchart_decision":
+        return """<svg width="280" height="210" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="140" cy="20" rx="40" ry="15" fill="#E8F5E9" stroke="#43A047" stroke-width="2"/>
+            <text x="140" y="24" font-family="Arial, sans-serif" font-size="11" text-anchor="middle">Αρχή</text>
+            <line x1="140" y1="35" x2="140" y2="50" stroke="#333" stroke-width="1.5"/>
+            <polygon points="35,50 245,50 230,80 15,80" fill="#E3F2FD" stroke="#1E88E5" stroke-width="1.5"/>
+            <text x="130" y="70" font-family="Arial, sans-serif" font-size="11" text-anchor="middle">Διάβασε x</text>
+            <line x1="140" y1="80" x2="140" y2="95" stroke="#333" stroke-width="1.5"/>
+            <polygon points="140,95 210,120 140,145 70,120" fill="#FFF3E0" stroke="#FB8C00" stroke-width="1.5"/>
+            <text x="140" y="124" font-family="Arial, sans-serif" font-size="11" text-anchor="middle">x &amp;gt;= 10 ;</text>
+            <line x1="210" y1="120" x2="240" y2="120" stroke="#333" stroke-width="1.5"/>
+            <line x1="240" y1="120" x2="240" y2="155" stroke="#333" stroke-width="1.5"/>
+            <text x="220" y="115" font-family="Arial, sans-serif" font-size="10" fill="#2E7D32">ΝΑΙ</text>
+            <polygon points="175,155 275,155 265,180 165,180" fill="#E3F2FD" stroke="#1E88E5" stroke-width="1.5"/>
+            <text x="215" y="171" font-family="Arial, sans-serif" font-size="9" text-anchor="middle">'Εγκρίθηκε'</text>
+            <line x1="70" y1="120" x2="40" y2="120" stroke="#333" stroke-width="1.5"/>
+            <line x1="40" y1="120" x2="40" y2="155" stroke="#333" stroke-width="1.5"/>
+            <text x="50" y="115" font-family="Arial, sans-serif" font-size="10" fill="#C62828">ΟΧΙ</text>
+            <polygon points="5,155 115,155 105,180 0,180" fill="#E3F2FD" stroke="#1E88E5" stroke-width="1.5"/>
+            <text x="55" y="171" font-family="Arial, sans-serif" font-size="9" text-anchor="middle">'Απορρίφθηκε'</text>
+        </svg>"""
+
+    elif shape_type == "flowchart_seq":
+        return """<svg width="220" height="110" xmlns="http://www.w3.org/2000/svg">
+            <rect x="60" y="5" width="100" height="28" rx="3" fill="#FFFDE7" stroke="#FDD835" stroke-width="1.5"/>
+            <text x="110" y="23" font-family="Arial, sans-serif" font-size="11" text-anchor="middle">A = 5</text>
+            <line x1="110" y1="33" x2="110" y2="43" stroke="#333" stroke-width="1.5"/>
+            <rect x="60" y="43" width="100" height="28" rx="3" fill="#FFFDE7" stroke="#FDD835" stroke-width="1.5"/>
+            <text x="110" y="61" font-family="Arial, sans-serif" font-size="11" text-anchor="middle">B = 3</text>
+            <line x1="110" y1="71" x2="110" y2="81" stroke="#333" stroke-width="1.5"/>
+            <rect x="60" y="81" width="100" height="28" rx="3" fill="#FFFDE7" stroke="#FDD835" stroke-width="1.5"/>
+            <text x="110" y="99" font-family="Arial, sans-serif" font-size="11" text-anchor="middle">A = A + B</text>
+        </svg>"""
+
+    return ""
 
 
 # ==========================================
@@ -165,7 +255,94 @@ QUIZZES = {
             "answer": "Στην εντολή 4 (πρέπει να στρίψει δεξιά 120°)",
         },
     ],
- 
+    "Γ.7.Μ2: Αναπαράσταση Αλγορίθμων με Λογικά Διαγράμματα": [
+        {
+            "question": "1. Ποια λειτουργία αντιπροσωπεύει το παρακάτω σύμβολο λογικού διαγράμματος;",
+            "svg": draw_svg_shape("parallelogram", "Είσοδος / Έξοδος"),
+            "options": [
+                "Εισαγωγή δεδομένων (Διάβασε) ή Εξαγωγή αποτελεσμάτων (Τύπωσε)",
+                "Εκτέλεση αριθμητικών υπολογισμών και εκχωρήσεων",
+                "Έλεγχος συνθήκης και λήψη απόφασης",
+                "Δήλωση Αρχής ή Τέλους του αλγορίθμου",
+            ],
+            "answer": "Εισαγωγή δεδομένων (Διάβασε) ή Εξαγωγή αποτελεσμάτων (Τύπωσε)",
+        },
+        {
+            "question": "2. Για την εκτέλεση της εντολής υπολογισμού x = a + b, ποιο από τα παρακάτω σύμβολα πρέπει να χρησιμοποιηθεί;",
+            "svg": draw_svg_shape("shapes_row", ""),
+            "options": [
+                "Ορθογώνιο",
+                "Παραλληλόγραμμο",
+                "Ρόμβος",
+                "Έλλειψη",
+            ],
+            "answer": "Ορθογώνιο",
+        },
+        {
+            "question": "3. Ποιος είναι ο ρόλος του παρακάτω συμβόλου (Ρόμβος) σε ένα Διάγραμμα Ροής;",
+            "svg": draw_svg_shape("rhombus", "x > 0 ;"),
+            "options": [
+                "Έλεγχο συνθήκης / Λήψη απόφασης",
+                "Εισαγωγή τιμών από το πληκτρολόγιο",
+                "Εκτύπωση αποτελεσμάτων στην οθόνη",
+                "Αναγραφή του τίτλου του προγράμματος",
+            ],
+            "answer": "Έλεγχο συνθήκης / Λήψη απόφασης",
+        },
+        {
+            "question": "4. Μελέτησε το παρακάτω Διάγραμμα Ροής. Αν δώσουμε ως είσοδο τον αριθμό x = 4, ποια τιμή θα τυπωθεί στην οθόνη;",
+            "svg": draw_svg_shape("flowchart_calc", ""),
+            "options": [
+                "9",
+                "8",
+                "5",
+                "4",
+            ],
+            "answer": "9",
+        },
+        {
+            "question": "5. Παρατήρησε το παρακάτω Διάγραμμα Ροής. Ποιο είναι το αποτέλεσμα αν δώσουμε x = 10;",
+            "svg": draw_svg_shape("flowchart_decision", ""),
+            "options": [
+                "Εγκρίθηκε",
+                "Απορρίφθηκε",
+                "10",
+                "Δεν θα τυπωθεί τίποτα",
+            ],
+            "answer": "Εγκρίθηκε",
+        },
+        {
+            "question": "6. Ποια είναι η σωστή σειρά συμβόλων για τη διαδικασία: 'Διάβασε A ➔ Υπολόγισε B = A * 2 ➔ Τύπωσε B';",
+            "options": [
+                "Έλλειψη ➔ Παραλληλόγραμμο ➔ Ορθογώνιο ➔ Παραλληλόγραμμο ➔ Έλλειψη",
+                "Έλλειψη ➔ Ορθογώνιο ➔ Παραλληλόγραμμο ➔ Έλλειψη",
+                "Παραλληλόγραμμο ➔ Ρόμβος ➔ Ορθογώνιο ➔ Έλλειψη",
+                "Έλλειψη ➔ Ρόμβος ➔ Ορθογώνιο ➔ Έλλειψη",
+            ],
+            "answer": "Έλλειψη ➔ Παραλληλόγραμμο ➔ Ορθογώνιο ➔ Παραλληλόγραμμο ➔ Έλλειψη",
+        },
+        {
+            "question": "7. Αν σε ένα Διάγραμμα Ροής εκτελεστεί η παρακάτω αλληλουχία εντολών, ποια θα είναι η τελική τιμή της μεταβλητής A;",
+            "svg": draw_svg_shape("flowchart_seq", ""),
+            "options": [
+                "8",
+                "5",
+                "3",
+                "53",
+            ],
+            "answer": "8",
+        },
+        {
+            "question": "8. Τι εκφράζει μια Μεταβλητή στην Πληροφορική;",
+            "options": [
+                "Μια θέση στη μνήμη του υπολογιστή με όνομα, της οποίας το περιεχόμενο μπορεί να μεταβάλλεται",
+                "Έναν σταθερό αριθμό που δεν μπορεί να αλλάξει ποτέ",
+                "Το όνομα του υπολογιστή στον οποίο τρέχει το πρόγραμμα",
+                "Τη γραφική παράσταση του αλγορίθμου",
+            ],
+            "answer": "Μια θέση στη μνήμη του υπολογιστή με όνομα, της οποίας το περιεχόμενο μπορεί να μεταβάλλεται",
+        },
+    ],
 }
 
 # ==========================================
@@ -362,6 +539,12 @@ def student_dashboard():
                 user_answers = {}
                 for i, q in enumerate(questions):
                     st.markdown(f"**{q['question']}**")
+
+                    # 🔥 Εμφάνιση SVG Σχήματος / Διαγράμματος ως Base64 Εικόνα
+                    if "svg" in q and q["svg"]:
+                        svg_url = svg_to_data_url(q["svg"])
+                        st.image(svg_url)
+
                     user_answers[i] = st.radio(
                         f"Επιλογή για την ερώτηση {i+1}:",
                         q["options"],
