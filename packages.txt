@@ -1,2 +1,4 @@
-tdsodbc
 freetds-bin
+freetds-common
+tdsodbc
+unixodbc
