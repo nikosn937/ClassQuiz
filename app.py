@@ -102,30 +102,23 @@ def draw_svg_shape(shape_type: str, text: str = "") -> str:
 # ==========================================
 def get_db_connection():
     if "mssql" not in st.secrets:
-        st.error(
-            "⚠️ Δεν έχουν ρυθμιστεί τα Database Secrets (mssql) στο Streamlit"
-            " settings."
-        )
+        st.error("⚠️ Δεν έχουν ρυθμιστεί τα Database Secrets (mssql).")
         st.stop()
 
     server = st.secrets["mssql"]["server"]
-    port = st.secrets["mssql"]["port"]
+    port = int(st.secrets["mssql"].get("port", 1433))
     database = st.secrets["mssql"]["database"]
     username = st.secrets["mssql"]["username"]
     password = st.secrets["mssql"]["password"]
 
-    if platform.system() == "Windows":
-        driver = "{ODBC Driver 17 for SQL Server}"
-        conn_str = (
-            f"DRIVER={driver};SERVER={server},{port};DATABASE={database};UID={username};PWD={password}"
-        )
-    else:
-        driver = "{FreeTDS}"
-        conn_str = (
-            f"DRIVER={driver};SERVER={server};PORT={port};DATABASE={database};UID={username};PWD={password};TDS_Version=7.4;ClientCharset=UTF-8;"
-        )
-
-    return pyodbc.connect(conn_str)
+    # Σύνδεση μέσω pymssql χωρίς pyodbc / ODBC Drivers
+    return pymssql.connect(
+        server=server,
+        port=port,
+        user=username,
+        password=password,
+        database=database,
+    )
 
 
 # ==========================================
