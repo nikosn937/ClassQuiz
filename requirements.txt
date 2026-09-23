@@ -2,5 +2,4 @@ streamlit
 pandas
 sqlalchemy
 pymssql
-pyodbc
 streamlit-autorefresh
