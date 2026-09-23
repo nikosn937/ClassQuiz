@@ -1,7 +1,7 @@
 import base64
 import platform
 import pandas as pd
-import pyodbc
+import pymssql
 import streamlit as st
 import streamlit.components.v1 as components
 from streamlit_autorefresh import st_autorefresh
@@ -105,20 +105,25 @@ def get_db_connection():
         st.error("⚠️ Δεν έχουν ρυθμιστεί τα Database Secrets (mssql).")
         st.stop()
 
-    server = st.secrets["mssql"]["server"]
-    port = int(st.secrets["mssql"].get("port", 1433))
-    database = st.secrets["mssql"]["database"]
-    username = st.secrets["mssql"]["username"]
-    password = st.secrets["mssql"]["password"]
+    try:
+        server = st.secrets["mssql"]["server"]
+        port = int(st.secrets["mssql"].get("port", 1433))
+        database = st.secrets["mssql"]["database"]
+        username = st.secrets["mssql"]["username"]
+        password = st.secrets["mssql"]["password"]
 
-    # Σύνδεση μέσω pymssql χωρίς pyodbc / ODBC Drivers
-    return pymssql.connect(
-        server=server,
-        port=port,
-        user=username,
-        password=password,
-        database=database,
-    )
+        # Σύνδεση μέσω pymssql χωρίς pyodbc / ODBC Drivers
+        return pymssql.connect(
+            server=server,
+            port=port,
+            user=username,
+            password=password,
+            database=database,
+            timeout=10,
+        )
+    except Exception as e:
+        st.error(f"❌ Σφάλμα σύνδεσης στη βάση δεδομένων: {e}")
+        st.stop()
 
 
 # ==========================================
@@ -348,12 +353,12 @@ def sync_quizzes_to_db():
 
     for title in QUIZZES.keys():
         cursor.execute(
-            "SELECT QuizID FROM Quizzes WHERE Title = ?", (title,)
+            "SELECT QuizID FROM Quizzes WHERE Title = %s", (title,)
         )
         row = cursor.fetchone()
         if not row:
             cursor.execute(
-                "INSERT INTO Quizzes (Title, Subject) VALUES (?, ?)",
+                "INSERT INTO Quizzes (Title, Subject) VALUES (%s, %s)",
                 (title, "Πληροφορική"),
             )
 
@@ -395,7 +400,7 @@ def login_screen():
             conn = get_db_connection()
             query = (
                 "SELECT Username, FirstName, LastName, Role, Password FROM"
-                " Students WHERE Username = ?"
+                " Students WHERE Username = %s"
             )
             df_user = pd.read_sql(query, conn, params=[username_input])
             conn.close()
@@ -435,7 +440,7 @@ def student_dashboard():
         SELECT c.AvgScore, c.ClassRank, c.TotalInClass, o.OverallRank, o.TotalStudents
         FROM vw_ClassRankings c
         JOIN vw_OverallRankings o ON c.Username = o.Username
-        WHERE c.Username = ?
+        WHERE c.Username = %s
     """
     df_rank = pd.read_sql(rank_query, conn, params=[username])
 
@@ -444,7 +449,7 @@ def student_dashboard():
         SELECT q.Title AS [Διαγώνισμα], qr.Score AS [Βαθμός], qr.CompletedAt AS [Ημερομηνία]
         FROM QuizResults qr
         JOIN Quizzes q ON qr.QuizID = q.QuizID
-        WHERE qr.Username = ?
+        WHERE qr.Username = %s
         ORDER BY qr.CompletedAt DESC
     """
     df_results = pd.read_sql(results_query, conn, params=[username])
@@ -496,7 +501,7 @@ def student_dashboard():
             SELECT COUNT(*) AS AttemptCount, ISNULL(MAX(Score), 0) AS BestScore
             FROM QuizResults qr
             JOIN Quizzes q ON qr.QuizID = q.QuizID
-            WHERE qr.Username = ? AND q.Title = ?
+            WHERE qr.Username = %s AND q.Title = %s
         """
         df_attempts = pd.read_sql(
             attempts_query, conn, params=[username, selected_quiz_title]
@@ -562,7 +567,7 @@ def student_dashboard():
                     cursor = conn.cursor()
 
                     cursor.execute(
-                        "SELECT QuizID FROM Quizzes WHERE Title = ?",
+                        "SELECT QuizID FROM Quizzes WHERE Title = %s",
                         (selected_quiz_title,),
                     )
                     quiz_row = cursor.fetchone()
@@ -578,7 +583,7 @@ def student_dashboard():
                             cursor.execute(
                                 """
                                 INSERT INTO StudentAnswers (Username, QuizID, QuestionIndex, IsCorrect)
-                                VALUES (?, ?, ?, ?)
+                                VALUES (%s, %s, %s, %s)
                             """,
                                 (username, quiz_id, i, 1 if is_correct else 0),
                             )
@@ -586,7 +591,7 @@ def student_dashboard():
                         final_score = (correct_count / len(questions)) * 100
                         cursor.execute(
                             "INSERT INTO QuizResults (Username, QuizID, Score)"
-                            " VALUES (?, ?, ?)",
+                            " VALUES (%s, %s, %s)",
                             (username, quiz_id, final_score),
                         )
                         conn.commit()
@@ -843,20 +848,20 @@ def teacher_dashboard():
                     cursor = conn.cursor()
 
                     cursor.execute(
-                        "SELECT QuizID FROM Quizzes WHERE Title = ?",
+                        "SELECT QuizID FROM Quizzes WHERE Title = %s",
                         (selected_quiz,),
                     )
                     quiz_id = cursor.fetchone()[0]
                     username_to_del = target_attempts.iloc[0]["Username"]
 
                     cursor.execute(
-                        "DELETE FROM QuizResults WHERE Username = ? AND QuizID"
-                        " = ?",
+                        "DELETE FROM QuizResults WHERE Username = %s AND QuizID"
+                        " = %s",
                         (username_to_del, quiz_id),
                     )
                     cursor.execute(
-                        "DELETE FROM StudentAnswers WHERE Username = ? AND"
-                        " QuizID = ?",
+                        "DELETE FROM StudentAnswers WHERE Username = %s AND"
+                        " QuizID = %s",
                         (username_to_del, quiz_id),
                     )
                     conn.commit()
